@@ -7,18 +7,19 @@ import (
 )
 
 type ShipmentDetailsResponse struct {
-	ID             uuid.UUID                  `json:"id"`
-	ShipmentType   string                     `json:"shipmentType"`
-	ShipmentNumber string                     `json:"shipmentNumber"`
-	SealineCode    string                     `json:"sealineCode"`
-	SealineName    string                     `json:"sealineName"`
-	ShippingStatus string                     `json:"shippingStatus"`
-	CreatedAt      time.Time                  `json:"createdAt"`
-	UpdatedAt      time.Time                  `json:"updatedAt"`
-	Locations      []LocationResponse         `json:"locations"`
-	Route          ShipmentRouteResponse      `json:"route"`
-	Vessels        []ShipmentVesselResponse   `json:"vessels"`
-	Facilities     []ShipmentFacilityResponse `json:"facilities"`
+	ID             uuid.UUID                   `json:"id"`
+	ShipmentType   string                      `json:"shipmentType"`
+	ShipmentNumber string                      `json:"shipmentNumber"`
+	SealineCode    string                      `json:"sealineCode"`
+	SealineName    string                      `json:"sealineName"`
+	ShippingStatus string                      `json:"shippingStatus"`
+	CreatedAt      time.Time                   `json:"createdAt"`
+	UpdatedAt      time.Time                   `json:"updatedAt"`
+	Locations      []LocationResponse          `json:"locations"`
+	Route          ShipmentRouteResponse       `json:"route"`
+	Vessels        []ShipmentVesselResponse    `json:"vessels"`
+	Facilities     []ShipmentFacilityResponse  `json:"facilities"`
+	Containers     []ShipmentContainerResponse `json:"containers"`
 }
 
 type LocationResponse struct {
@@ -62,4 +63,11 @@ type ShipmentFacilityResponse struct {
 	SmdgCode    *string `json:"smdgCode"`
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
+}
+
+type ShipmentContainerResponse struct {
+	Number   string `json:"number"`
+	IsoCode  string `json:"isoCode"`
+	SizeType string `json:"sizeType"`
+	Status   string `json:"status"`
 }

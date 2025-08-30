@@ -8,13 +8,13 @@ import (
 )
 
 type Container struct {
-	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Number         string    `gorm:"type:varchar(255);not null;uniqueIndex"`
-	IsoCode        string    `gorm:"type:varchar(10);not null"`
-	SizeType       string    `gorm:"type:varchar(50);not null"`
-	ShippingStatus string    `gorm:"type:varchar(50);not null"`
-	CreatedAt      time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
-	UpdatedAt      time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Number    string    `gorm:"type:varchar(255);not null;uniqueIndex"`
+	IsoCode   string    `gorm:"type:varchar(10);not null"`
+	SizeType  string    `gorm:"type:varchar(50);not null"`
+	Status    string    `gorm:"type:varchar(50);not null"`
+	CreatedAt time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+	UpdatedAt time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 }
 
 func (Container) TableName() string {

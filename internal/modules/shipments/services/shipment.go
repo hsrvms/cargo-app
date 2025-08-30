@@ -195,6 +195,21 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		facilities = append(facilities, *createdFacility)
 	}
 
+	containers := make([]models.Container, 0, len(apiResponse.Containers))
+	for _, c := range apiResponse.Containers {
+		container := models.Container{
+			Number:   c.Number,
+			IsoCode:  c.IsoCode,
+			SizeType: c.SizeType,
+			Status:   c.Status,
+		}
+		createdContainer, err := s.repo.CreateContainer(ctx, &shipment.ID, &container)
+		if err != nil {
+			return nil, err
+		}
+		containers = append(containers, *createdContainer)
+	}
+
 	log.Printf("Created shipment %s in database with ID: %s", req.ShipmentNumber, shipment.ID)
 
 	return shipment, nil

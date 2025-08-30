@@ -26,6 +26,7 @@ type ShipmentRepository interface {
 	CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error)
 	CreateVessel(ctx context.Context, shipmentID *uuid.UUID, vessel *models.Vessel) (*models.Vessel, error)
 	CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error)
+	CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error)
 	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 }
 
@@ -231,6 +232,24 @@ func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uui
 	return facility, err
 }
 
+func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error) {
+	err := r.db.DB.WithContext(ctx).Where(container).FirstOrCreate(container).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if shipmentID != nil {
+		link := models.ShipmentContainer{
+			ShipmentID:  *shipmentID,
+			ContainerID: container.ID,
+		}
+		if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
+			return nil, fmt.Errorf("failed to link container to shipment: %w", err)
+		}
+	}
+	return container, nil
+}
+
 func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
 	shipment, err := r.GetShipmentByID(ctx, shipmentID)
 	if err != nil {
@@ -307,7 +326,6 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		Where("sv.shipment_id = ?", shipmentID).
 		Order("sv.added_at ASC").
 		Find(&vessels).Error
-
 	if err != nil {
 		return nil, err
 	}
@@ -329,6 +347,9 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		Where("sf.shipment_id = ?", shipmentID).
 		Order("sf.added_at ASC").
 		Find(&facilities).Error
+	if err != nil {
+		return nil, err
+	}
 
 	facilityResponses := make([]dto.ShipmentFacilityResponse, len(facilities))
 	for i, f := range facilities {
@@ -340,6 +361,26 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 			SmdgCode:    f.SmdgCode,
 			Latitude:    f.Latitude,
 			Longitude:   f.Longitude,
+		}
+	}
+
+	var containers []models.Container
+	err = r.db.DB.WithContext(ctx).
+		Joins("JOIN shipment_containers sc ON sc.container_id = containers.id").
+		Where("sc.shipment_id = ?", shipmentID).
+		Order("sc.added_at ASC").
+		Find(&containers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	containersResponse := make([]dto.ShipmentContainerResponse, len(containers))
+	for i, c := range containers {
+		containersResponse[i] = dto.ShipmentContainerResponse{
+			Number:   c.Number,
+			IsoCode:  c.IsoCode,
+			SizeType: c.SizeType,
+			Status:   c.Status,
 		}
 	}
 
@@ -356,5 +397,6 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		Route:          routeResponse,
 		Vessels:        vesselResponses,
 		Facilities:     facilityResponses,
+		Containers:     containersResponse,
 	}, nil
 }
