@@ -3,6 +3,7 @@ package server
 import (
 	"go-starter/internal/modules/auth"
 	"go-starter/internal/modules/dashboard"
+	"go-starter/internal/modules/shipments"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -17,4 +18,6 @@ func (s *Server) initRoutes() {
 
 	auth.RegisterRoutes(s.Echo, api, s.DB)
 	dashboard.RegisterRoutes(s.Echo, api, s.DB)
+	shipments.RegisterRoutes(s.Echo, api, s.DB)
+
 }

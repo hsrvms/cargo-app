@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-starter/internal/modules/auth/models"
+	shipmentModels "go-starter/internal/modules/shipments/models"
 	"go-starter/internal/server"
 	"go-starter/pkg/config"
 	"go-starter/pkg/db"
@@ -22,7 +23,18 @@ func main() {
 	}()
 
 	// Run GORM auto-migration with cleanup
-	if err := database.MigrateWithCleanup(&models.User{}); err != nil {
+	if err := database.AutoMigrate(
+		&models.User{},
+		&shipmentModels.Shipment{},
+		&shipmentModels.UserShipment{},
+		&shipmentModels.Location{},
+		&shipmentModels.ShipmentLocation{},
+		&shipmentModels.ShipmentRoute{},
+		&shipmentModels.Vessel{},
+		&shipmentModels.ShipmentVessel{},
+		&shipmentModels.Facility{},
+		&shipmentModels.ShipmentFacility{},
+	); err != nil {
 		log.Fatalf("Failed to run database migrations: %v", err)
 	}
 	log.Println("Database migrations completed successfully")

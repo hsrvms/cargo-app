@@ -82,35 +82,6 @@ func (d *Database) Close() error {
 	return nil
 }
 
-func (d *Database) AutoMigrate(models ...interface{}) error {
-	return d.DB.AutoMigrate(models...)
-}
-
-// MigrateWithCleanup handles migration from existing schema to GORM schema
-func (d *Database) MigrateWithCleanup(models ...interface{}) error {
-	// First, check if the table exists and clean up old constraints
-	var tableExists bool
-	err := d.DB.Raw("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')").Scan(&tableExists).Error
-	if err != nil {
-		return fmt.Errorf("failed to check table existence: %w", err)
-	}
-
-	if tableExists {
-		log.Println("Existing users table found, cleaning up constraints...")
-
-		// Drop old constraints that might conflict with GORM
-		cleanupSQL := []string{
-			"ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key",
-			"DROP INDEX IF EXISTS idx_users_email",
-		}
-
-		for _, sql := range cleanupSQL {
-			if err := d.DB.Exec(sql).Error; err != nil {
-				log.Printf("Warning: Could not execute cleanup SQL '%s': %v", sql, err)
-			}
-		}
-	}
-
-	// Now run GORM auto-migration
+func (d *Database) AutoMigrate(models ...any) error {
 	return d.DB.AutoMigrate(models...)
 }

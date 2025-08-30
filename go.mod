@@ -8,6 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v4 v4.13.4
+	github.com/lib/pq v1.10.9
 	github.com/rdbell/echo-pretty-logger v1.0.0
 	golang.org/x/crypto v0.41.0
 	gorm.io/driver/postgres v1.6.0
