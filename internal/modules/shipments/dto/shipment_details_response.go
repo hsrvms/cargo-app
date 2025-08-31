@@ -92,7 +92,7 @@ type ShipmentContainerEventResponse struct {
 
 type ShipmentRouteDataResponse struct {
 	RouteSegments []ShipmentRouteSegmentResponse `json:"routeSegments"`
-	// Coordinates ShipmentCoordinatesResponse `json:"coordinates"`
+	Coordinates   ShipmentCoordinatesResponse    `json:"coordinates"`
 	// Ais ShipmentAisDataResponse `json:"ais"`
 }
 
@@ -106,4 +106,10 @@ type ShipmentRouteSegmentPointResponse struct {
 	Latitude   float64 `json:"latitude"`
 	Longitude  float64 `json:"longitude"`
 	PointOrder int     `json:"pointOrder"`
+}
+
+type ShipmentCoordinatesResponse struct {
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }

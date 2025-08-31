@@ -296,6 +296,17 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		}
 	}
 
+	coordinate := &models.Coordinate{
+		ShipmentID: shipment.ID,
+		Latitude:   apiResponse.RouteData.Coordinates.Lat,
+		Longitude:  apiResponse.RouteData.Coordinates.Lng,
+	}
+
+	_, err = s.repo.CreateCoordinate(ctx, coordinate)
+	if err != nil {
+		return nil, err
+	}
+
 	log.Printf("Created shipment %s in database with ID: %s", req.ShipmentNumber, shipment.ID)
 
 	return shipment, nil

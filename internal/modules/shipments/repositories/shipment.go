@@ -44,6 +44,8 @@ type ShipmentRepository interface {
 	CreateRouteSegment(ctx context.Context, routeSegment *models.RouteSegment) (*models.RouteSegment, error)
 	CreateRouteSegmentPoint(ctx context.Context, point *models.RouteSegmentPoint) (*models.RouteSegmentPoint, error)
 
+	CreateCoordinate(ctx context.Context, coordinate *models.Coordinate) (*models.Coordinate, error)
+
 	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 }
 
@@ -355,6 +357,14 @@ func (r *shipmentRepository) CreateRouteSegmentPoint(ctx context.Context, point 
 	return point, nil
 }
 
+func (r *shipmentRepository) CreateCoordinate(ctx context.Context, coordinate *models.Coordinate) (*models.Coordinate, error) {
+	err := r.db.DB.WithContext(ctx).Where(coordinate).FirstOrCreate(coordinate).Error
+	if err != nil {
+		return nil, err
+	}
+	return coordinate, nil
+}
+
 func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
 	shipment, err := r.GetShipmentByID(ctx, shipmentID)
 	if err != nil {
@@ -514,8 +524,7 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 			}
 
 			containerEventsResponse[i] = dto.ShipmentContainerEventResponse{
-				Location: locationResponse,
-				// Facility: ce.FacilityID,
+				Location:          locationResponse,
 				Description:       ce.Description,
 				EventType:         ce.EventType,
 				EventCode:         ce.EventCode,
@@ -525,8 +534,7 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 				IsAdditionalEvent: ce.IsAdditionalEvent,
 				RouteType:         ce.RouteType,
 				TransportType:     ce.TransportType,
-				// Vessel:            ce.VesselID,
-				Voyage: ce.Voyage,
+				Voyage:            ce.Voyage,
 			}
 
 			if ce.FacilityID != nil {
@@ -605,8 +613,21 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		routeSegmentsResponse = append(routeSegmentsResponse, routeSegmentResponse)
 	}
 
+	var shipmentCoordinates *models.Coordinate
+	err = r.db.DB.WithContext(ctx).
+		Where("shipment_id = ?", shipment.ID).
+		Order("updated_at DESC").
+		First(&shipmentCoordinates).Error
+
+	shipmentCoordinatesResponse := dto.ShipmentCoordinatesResponse{
+		Latitude:  shipmentCoordinates.Latitude,
+		Longitude: shipmentCoordinates.Longitude,
+		UpdatedAt: shipmentCoordinates.UpdatedAt,
+	}
+
 	routeData := dto.ShipmentRouteDataResponse{
 		RouteSegments: routeSegmentsResponse,
+		Coordinates:   shipmentCoordinatesResponse,
 	}
 
 	return &dto.ShipmentDetailsResponse{
