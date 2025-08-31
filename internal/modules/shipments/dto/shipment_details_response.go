@@ -93,7 +93,7 @@ type ShipmentContainerEventResponse struct {
 type ShipmentRouteDataResponse struct {
 	RouteSegments []ShipmentRouteSegmentResponse `json:"routeSegments"`
 	Coordinates   ShipmentCoordinatesResponse    `json:"coordinates"`
-	// Ais ShipmentAisDataResponse `json:"ais"`
+	Ais           ShipmentAisResponse            `json:"ais"`
 }
 
 type ShipmentRouteSegmentResponse struct {
@@ -112,4 +112,31 @@ type ShipmentCoordinatesResponse struct {
 	Latitude  float64   `json:"latitude"`
 	Longitude float64   `json:"longitude"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type ShipmentAisResponse struct {
+	Status                   string     `json:"status"`
+	LastEventDescription     *string    `json:"lastEventDescription"`
+	LastEventDate            *time.Time `json:"lastEventDate"`
+	LastEventVoyage          *string    `json:"lastEventVoyage"`
+	DischargePortName        *string    `json:"dischargePortName"`
+	DischargePortCountryCode *string    `json:"dischargePortCountryCode"`
+	DischargePortCode        *string    `json:"dischargePortCode"`
+	DischargePortDate        *time.Time `json:"dischargePortDate"`
+	DischargePortDateLabel   *string    `json:"dischargePortDateLabel"`
+	DeparturePortName        *string    `json:"departurePortName"`
+	DeparturePortCountryCode *string    `json:"departurePortCountryCode"`
+	DeparturePortCode        *string    `json:"departurePortCode"`
+	DeparturePortDate        *time.Time `json:"departurePortDate"`
+	DeparturePortDateLabel   *string    `json:"departurePortDateLabel"`
+	ArrivalPortName          *string    `json:"arrivalPortName"`
+	ArrivalPortCountryCode   *string    `json:"arrivalPortCountryCode"`
+	ArrivalPortCode          *string    `json:"arrivalPortCode"`
+	ArrivalPortDate          *time.Time `json:"arrivalPortDate"`
+	ArrivalPortDateLabel     *string    `json:"arrivalPortDateLabel"`
+	VesselID                 *uuid.UUID `json:"vesselId"`
+	LastVesselPositionLat    *float64   `json:"lastVesselPositionLat"`
+	LastVesselPositionLng    *float64   `json:"lastVesselPositionLng"`
+	LastVesselPositionUpdate *time.Time `json:"lastVesselPositionUpdate"`
+	UpdatedAt                time.Time  `json:"updatedAt"`
 }

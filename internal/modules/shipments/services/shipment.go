@@ -307,6 +307,42 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		return nil, err
 	}
 
+	aisData := apiResponse.RouteData.Ais.Data
+	aisVessel, err := s.repo.FindVesselByIMOAndMMSI(ctx, aisData.Vessel.Imo, aisData.Vessel.Mmsi)
+	if err != nil {
+		return nil, err
+	}
+	ais := &models.Ais{
+		ShipmentID:               shipment.ID,
+		Status:                   apiResponse.RouteData.Ais.Status,
+		LastEventDescription:     aisData.LastEvent.Description,
+		LastEventDate:            aisData.LastEvent.Date,
+		LastEventVoyage:          aisData.LastEvent.Voyage,
+		DischargePortName:        aisData.DischargePort.Name,
+		DischargePortCountryCode: aisData.DischargePort.CountryCode,
+		DischargePortCode:        aisData.DischargePort.Code,
+		DischargePortDate:        aisData.DischargePort.Date,
+		DischargePortDateLabel:   aisData.DischargePort.DateLabel,
+		DeparturePortName:        aisData.DeparturePort.Name,
+		DeparturePortCountryCode: aisData.DeparturePort.CountryCode,
+		DeparturePortCode:        aisData.DeparturePort.Code,
+		DeparturePortDate:        aisData.DeparturePort.Date,
+		DeparturePortDateLabel:   aisData.DeparturePort.DateLabel,
+		ArrivalPortName:          aisData.ArrivalPort.Name,
+		ArrivalPortCountryCode:   aisData.ArrivalPort.CountryCode,
+		ArrivalPortCode:          aisData.ArrivalPort.Code,
+		ArrivalPortDate:          aisData.ArrivalPort.Date,
+		ArrivalPortDateLabel:     aisData.ArrivalPort.DateLabel,
+		VesselID:                 &aisVessel.ID,
+		LastVesselPositionLat:    aisData.LastVesselPosition.Lat,
+		LastVesselPositionLng:    aisData.LastVesselPosition.Lng,
+		LastVesselPositionUpdate: aisData.LastVesselPosition.UpdatedAt,
+	}
+	_, err = s.repo.CreateAis(ctx, ais)
+	if err != nil {
+		return nil, err
+	}
+
 	log.Printf("Created shipment %s in database with ID: %s", req.ShipmentNumber, shipment.ID)
 
 	return shipment, nil

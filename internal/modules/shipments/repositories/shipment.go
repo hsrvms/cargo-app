@@ -46,6 +46,9 @@ type ShipmentRepository interface {
 
 	CreateCoordinate(ctx context.Context, coordinate *models.Coordinate) (*models.Coordinate, error)
 
+	CreateAis(ctx context.Context, ais *models.Ais) (*models.Ais, error)
+	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
+
 	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 }
 
@@ -365,6 +368,59 @@ func (r *shipmentRepository) CreateCoordinate(ctx context.Context, coordinate *m
 	return coordinate, nil
 }
 
+func (r *shipmentRepository) CreateAis(ctx context.Context, ais *models.Ais) (*models.Ais, error) {
+	err := r.db.DB.WithContext(ctx).Where(ais).FirstOrCreate(ais).Error
+	if err != nil {
+		return nil, err
+	}
+	return ais, nil
+}
+
+func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error) {
+	var ais dto.ShipmentAisResponse
+
+	err := r.db.DB.WithContext(ctx).
+		Model(&models.Ais{}).
+		Select(`
+            status,
+            last_event_description,
+            last_event_date,
+            last_event_voyage,
+            discharge_port_name,
+            discharge_port_country_code,
+            discharge_port_code,
+            discharge_port_date,
+            discharge_port_date_label,
+            departure_port_name,
+            departure_port_country_code,
+            departure_port_code,
+            departure_port_date,
+            departure_port_date_label,
+            arrival_port_name,
+            arrival_port_country_code,
+            arrival_port_code,
+            arrival_port_date,
+            arrival_port_date_label,
+            vessel_id,
+            last_vessel_position_lat,
+            last_vessel_position_lng,
+            last_vessel_position_update,
+            updated_at
+        `).
+		Where("shipment_id = ?", shipmentID).
+		Order("updated_at DESC"). // latest snapshot
+		First(&ais).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &ais, nil
+}
+
 func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
 	shipment, err := r.GetShipmentByID(ctx, shipmentID)
 	if err != nil {
@@ -625,9 +681,18 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		UpdatedAt: shipmentCoordinates.UpdatedAt,
 	}
 
+	aisResponse, err := r.GetShipmentAisData(ctx, shipmentID)
+	if err != nil {
+		return nil, err
+	}
+	if aisResponse == nil {
+		return nil, fmt.Errorf("ais data not found for shipment: %s", shipmentID)
+	}
+
 	routeData := dto.ShipmentRouteDataResponse{
 		RouteSegments: routeSegmentsResponse,
 		Coordinates:   shipmentCoordinatesResponse,
+		Ais:           *aisResponse,
 	}
 
 	return &dto.ShipmentDetailsResponse{

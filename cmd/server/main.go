@@ -40,6 +40,7 @@ func main() {
 		&shipmentModels.RouteSegment{},
 		&shipmentModels.RouteSegmentPoint{},
 		&shipmentModels.Coordinate{},
+		&shipmentModels.Ais{},
 	); err != nil {
 		log.Fatalf("Failed to run database migrations: %v", err)
 	}

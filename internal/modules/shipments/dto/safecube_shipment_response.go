@@ -106,36 +106,36 @@ type SafeCubeRouteSegment struct {
 }
 
 type SafeCubeAisData struct {
-	Status string             `json:"status"`
-	Data   SafeCubeAisDetails `json:"data"`
+	Status string              `json:"status"`
+	Data   *SafeCubeAisDetails `json:"data"`
 }
 
 type SafeCubeAisDetails struct {
-	LastEvent          SafeCubeLastEvent      `json:"lastEvent"`
-	DischargePort      SafeCubePort           `json:"dischargePort"`
-	Vessel             SafeCubeVessel         `json:"vessel"`
-	LastVesselPosition SafeCubeVesselPosition `json:"lastVesselPosition"`
-	DeparturePort      SafeCubePort           `json:"departurePort"`
-	ArrivalPort        SafeCubePort           `json:"arrivalPort"`
-	UpdatedAt          time.Time              `json:"updatedAt"`
+	LastEvent          *SafeCubeLastEvent      `json:"lastEvent"`
+	DischargePort      *SafeCubePort           `json:"dischargePort"`
+	Vessel             *SafeCubeVessel         `json:"vessel"`
+	LastVesselPosition *SafeCubeVesselPosition `json:"lastVesselPosition"`
+	DeparturePort      *SafeCubePort           `json:"departurePort"`
+	ArrivalPort        *SafeCubePort           `json:"arrivalPort"`
+	UpdatedAt          *time.Time              `json:"updatedAt"`
 }
 
 type SafeCubeLastEvent struct {
-	Description string    `json:"description"`
-	Date        time.Time `json:"date"`
-	Voyage      string    `json:"voyage"`
+	Description *string    `json:"description"`
+	Date        *time.Time `json:"date"`
+	Voyage      *string    `json:"voyage"`
 }
 
 type SafeCubePort struct {
-	Name        *string   `json:"name,omitempty"`
-	CountryCode *string   `json:"countryCode"`
-	Code        *string   `json:"code"`
-	Date        time.Time `json:"date"`
-	DateLabel   string    `json:"dateLabel"`
+	Name        *string    `json:"name"`
+	CountryCode *string    `json:"countryCode"`
+	Code        *string    `json:"code"`
+	Date        *time.Time `json:"date"`
+	DateLabel   *string    `json:"dateLabel"`
 }
 
 type SafeCubeVesselPosition struct {
-	Lat       float64   `json:"lat"`
-	Lng       float64   `json:"lng"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	Lat       *float64   `json:"lat"`
+	Lng       *float64   `json:"lng"`
+	UpdatedAt *time.Time `json:"updatedAt"`
 }
