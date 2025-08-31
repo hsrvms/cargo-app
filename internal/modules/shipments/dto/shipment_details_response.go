@@ -20,6 +20,7 @@ type ShipmentDetailsResponse struct {
 	Vessels        []ShipmentVesselResponse    `json:"vessels"`
 	Facilities     []ShipmentFacilityResponse  `json:"facilities"`
 	Containers     []ShipmentContainerResponse `json:"containers"`
+	RouteData      ShipmentRouteDataResponse   `json:"routeData"`
 }
 
 type ShipmentLocationResponse struct {
@@ -87,4 +88,22 @@ type ShipmentContainerEventResponse struct {
 	TransportType     *string                   `json:"transportType"`
 	Vessel            *ShipmentVesselResponse   `json:"vessel"`
 	Voyage            *string                   `json:"voyage"`
+}
+
+type ShipmentRouteDataResponse struct {
+	RouteSegments []ShipmentRouteSegmentResponse `json:"routeSegments"`
+	// Coordinates ShipmentCoordinatesResponse `json:"coordinates"`
+	// Ais ShipmentAisDataResponse `json:"ais"`
+}
+
+type ShipmentRouteSegmentResponse struct {
+	Path         []ShipmentRouteSegmentPointResponse `json:"path"`
+	RouteType    string                              `json:"routeType"`
+	SegmentOrder int                                 `json:"segmentOrder"`
+}
+
+type ShipmentRouteSegmentPointResponse struct {
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+	PointOrder int     `json:"pointOrder"`
 }

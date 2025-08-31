@@ -264,7 +264,35 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 				return nil, err
 			}
 			containerEvents = append(containerEvents, *createdContainerEvent)
+		}
+	}
 
+	routeSegments := make([]models.RouteSegment, 0, len(apiResponse.RouteData.RouteSegments))
+	for segIdx, rs := range apiResponse.RouteData.RouteSegments {
+		segment := models.RouteSegment{
+			ShipmentID:   shipment.ID,
+			RouteType:    rs.RouteType,
+			SegmentOrder: segIdx,
+		}
+		createdSegment, err := s.repo.CreateRouteSegment(ctx, &segment)
+		if err != nil {
+			return nil, err
+		}
+		routeSegments = append(routeSegments, *createdSegment)
+
+		segmentPoints := make([]models.RouteSegmentPoint, 0, len(rs.Path))
+		for pointIdx, point := range rs.Path {
+			point := models.RouteSegmentPoint{
+				SegmentID:  segment.ID,
+				Latitude:   point.Lat,
+				Longitude:  point.Lng,
+				PointOrder: pointIdx,
+			}
+			createdPoint, err := s.repo.CreateRouteSegmentPoint(ctx, &point)
+			if err != nil {
+				return nil, err
+			}
+			segmentPoints = append(segmentPoints, *createdPoint)
 		}
 	}
 

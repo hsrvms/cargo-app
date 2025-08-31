@@ -23,18 +23,27 @@ type ShipmentRepository interface {
 	CheckShipmentExists(ctx context.Context, shipmentNumber string) (bool, error)
 	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error)
 	UpdateShipment(ctx context.Context, id uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
+
 	CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error)
 	FindLocationByLocode(ctx context.Context, locode string) (*models.Location, error)
 	FindLocationByID(ctx context.Context, id uuid.UUID) (*models.Location, error)
+
 	CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error)
+
 	CreateVessel(ctx context.Context, shipmentID *uuid.UUID, vessel *models.Vessel) (*models.Vessel, error)
 	FindVesselByIMOAndMMSI(ctx context.Context, imo, mmsi int) (*models.Vessel, error)
 	FindVesselByID(ctx context.Context, id *uuid.UUID) (*models.Vessel, error)
+
 	CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error)
 	FindFacilityByLocode(ctx context.Context, locode string) (*models.Facility, error)
 	FindFacilityByID(ctx context.Context, id *uuid.UUID) (*models.Facility, error)
+
 	CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error)
 	CreateContainerEvent(ctx context.Context, containerEvent *models.ContainerEvent) (*models.ContainerEvent, error)
+
+	CreateRouteSegment(ctx context.Context, routeSegment *models.RouteSegment) (*models.RouteSegment, error)
+	CreateRouteSegmentPoint(ctx context.Context, point *models.RouteSegmentPoint) (*models.RouteSegmentPoint, error)
+
 	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 }
 
@@ -330,6 +339,22 @@ func (r *shipmentRepository) CreateContainerEvent(ctx context.Context, container
 	return containerEvent, nil
 }
 
+func (r *shipmentRepository) CreateRouteSegment(ctx context.Context, routeSegment *models.RouteSegment) (*models.RouteSegment, error) {
+	err := r.db.DB.WithContext(ctx).Where(routeSegment).FirstOrCreate(routeSegment).Error
+	if err != nil {
+		return nil, err
+	}
+	return routeSegment, nil
+}
+
+func (r *shipmentRepository) CreateRouteSegmentPoint(ctx context.Context, point *models.RouteSegmentPoint) (*models.RouteSegmentPoint, error) {
+	err := r.db.DB.WithContext(ctx).Where(point).FirstOrCreate(point).Error
+	if err != nil {
+		return nil, err
+	}
+	return point, nil
+}
+
 func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
 	shipment, err := r.GetShipmentByID(ctx, shipmentID)
 	if err != nil {
@@ -539,9 +564,49 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 			}
 
 		}
-
 		containersResponse[i].Events = containerEventsResponse
+	}
 
+	var routeSegments []models.RouteSegment
+	err = r.db.DB.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Order("segment_order ASC").
+		Find(&routeSegments).Error
+	if err != nil {
+		return nil, err
+	}
+
+	routeSegmentsResponse := make([]dto.ShipmentRouteSegmentResponse, 0, len(routeSegments))
+	for _, rs := range routeSegments {
+		routeSegmentResponse := dto.ShipmentRouteSegmentResponse{
+			RouteType:    rs.RouteType,
+			SegmentOrder: rs.SegmentOrder,
+		}
+
+		var routeSegmentPoints []models.RouteSegmentPoint
+		err = r.db.DB.WithContext(ctx).
+			Where("segment_id = ?", rs.ID).
+			Order("point_order ASC").
+			Find(&routeSegmentPoints).Error
+		if err != nil {
+			return nil, err
+		}
+
+		path := make([]dto.ShipmentRouteSegmentPointResponse, 0, len(routeSegmentPoints))
+		for _, rsp := range routeSegmentPoints {
+			routeSegmentPointResponse := dto.ShipmentRouteSegmentPointResponse{
+				Latitude:   rsp.Latitude,
+				Longitude:  rsp.Longitude,
+				PointOrder: rsp.PointOrder,
+			}
+			path = append(path, routeSegmentPointResponse)
+		}
+		routeSegmentResponse.Path = path
+		routeSegmentsResponse = append(routeSegmentsResponse, routeSegmentResponse)
+	}
+
+	routeData := dto.ShipmentRouteDataResponse{
+		RouteSegments: routeSegmentsResponse,
 	}
 
 	return &dto.ShipmentDetailsResponse{
@@ -558,5 +623,6 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		Vessels:        vesselResponses,
 		Facilities:     facilityResponses,
 		Containers:     containersResponse,
+		RouteData:      routeData,
 	}, nil
 }

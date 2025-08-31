@@ -43,13 +43,13 @@ func (rs *RouteSegment) BeforeUpdate(tx *gorm.DB) error {
 type RouteSegmentPoint struct {
 	ID         uuid.UUID `gorm:"type:uuid;primaryKey"`
 	SegmentID  uuid.UUID `gorm:"type:uuid;not null;index"`
-	Lat        float64   `gorm:"not null"`
-	Lng        float64   `gorm:"not null"`
+	Latitude   float64   `gorm:"not null"`
+	Longitude  float64   `gorm:"not null"`
 	PointOrder int       `gorm:"not null"`
 }
 
 func (RouteSegmentPoint) TableName() string {
-	return "route_segments"
+	return "route_segment_points"
 }
 
 func (rsp *RouteSegmentPoint) BeforeCreate(tx *gorm.DB) error {
