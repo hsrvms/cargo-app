@@ -377,39 +377,12 @@ func (r *shipmentRepository) CreateAis(ctx context.Context, ais *models.Ais) (*m
 }
 
 func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error) {
-	var ais dto.ShipmentAisResponse
+	var aisModel models.Ais
 
 	err := r.db.DB.WithContext(ctx).
-		Model(&models.Ais{}).
-		Select(`
-            status,
-            last_event_description,
-            last_event_date,
-            last_event_voyage,
-            discharge_port_name,
-            discharge_port_country_code,
-            discharge_port_code,
-            discharge_port_date,
-            discharge_port_date_label,
-            departure_port_name,
-            departure_port_country_code,
-            departure_port_code,
-            departure_port_date,
-            departure_port_date_label,
-            arrival_port_name,
-            arrival_port_country_code,
-            arrival_port_code,
-            arrival_port_date,
-            arrival_port_date_label,
-            vessel_id,
-            last_vessel_position_lat,
-            last_vessel_position_lng,
-            last_vessel_position_update,
-            updated_at
-        `).
 		Where("shipment_id = ?", shipmentID).
 		Order("updated_at DESC"). // latest snapshot
-		First(&ais).Error
+		First(&aisModel).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -418,7 +391,44 @@ func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID 
 		return nil, err
 	}
 
-	return &ais, nil
+	// Convert to DTO
+	aisResponse := dto.ShipmentAisResponse{
+		Status:                   aisModel.Status,
+		LastEventDescription:     aisModel.LastEventDescription,
+		LastEventDate:            aisModel.LastEventDate,
+		LastEventVoyage:          aisModel.LastEventVoyage,
+		DischargePortName:        aisModel.DischargePortName,
+		DischargePortCountryCode: aisModel.DischargePortCountryCode,
+		DischargePortCode:        aisModel.DischargePortCode,
+		DischargePortDate:        aisModel.DischargePortDate,
+		DischargePortDateLabel:   aisModel.DischargePortDateLabel,
+		DeparturePortName:        aisModel.DeparturePortName,
+		DeparturePortCountryCode: aisModel.DeparturePortCountryCode,
+		DeparturePortCode:        aisModel.DeparturePortCode,
+		DeparturePortDate:        aisModel.DeparturePortDate,
+		DeparturePortDateLabel:   aisModel.DeparturePortDateLabel,
+		ArrivalPortName:          aisModel.ArrivalPortName,
+		ArrivalPortCountryCode:   aisModel.ArrivalPortCountryCode,
+		ArrivalPortCode:          aisModel.ArrivalPortCode,
+		ArrivalPortDate:          aisModel.ArrivalPortDate,
+		ArrivalPortDateLabel:     aisModel.ArrivalPortDateLabel,
+		LastVesselPositionLat:    aisModel.LastVesselPositionLat,
+		LastVesselPositionLng:    aisModel.LastVesselPositionLng,
+		LastVesselPositionUpdate: aisModel.LastVesselPositionUpdate,
+		UpdatedAt:                aisModel.UpdatedAt,
+	}
+
+	// Fetch vessel data if VesselID is present
+	if aisModel.VesselID != nil {
+		vessel, err := r.FindVesselByID(ctx, aisModel.VesselID)
+		if err != nil {
+			return nil, err
+		}
+		vesselResponse := r.convertVesselToDTO(*vessel)
+		aisResponse.Vessel = &vesselResponse
+	}
+
+	return &aisResponse, nil
 }
 
 func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
@@ -427,272 +437,34 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		return nil, err
 	}
 
-	var locations []models.Location
-	err = r.db.DB.WithContext(ctx).
-		Joins("JOIN shipment_locations sl ON sl.location_id = locations.id").
-		Where("sl.shipment_id = ?", shipmentID).
-		Order("sl.added_at ASC").
-		Find(&locations).Error
-
+	locations, err := r.getShipmentLocations(ctx, shipmentID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert models.Location to dto.LocationResponse
-	locationResponses := make([]dto.ShipmentLocationResponse, len(locations))
-	for i, loc := range locations {
-		locationResponses[i] = dto.ShipmentLocationResponse{
-			Name:        loc.Name,
-			State:       loc.State,
-			Country:     loc.Country,
-			CountryCode: loc.CountryCode,
-			Locode:      loc.Locode,
-			Latitude:    loc.Latitude,
-			Longitude:   loc.Longitude,
-			Timezone:    loc.Timezone,
-		}
-	}
-
-	var routes []models.ShipmentRoute
-	err = r.db.DB.WithContext(ctx).
-		Preload("Location").
-		Where("shipment_id = ?", shipmentID).
-		Find(&routes).Error
+	route, err := r.getShipmentRoute(ctx, shipmentID)
 	if err != nil {
 		return nil, err
 	}
 
-	routeResponse := dto.ShipmentRouteResponse{}
-	for _, r := range routes {
-		item := &dto.ShipmentRoutePoint{
-			Location: dto.ShipmentLocationResponse{
-				Name:        r.Location.Name,
-				State:       r.Location.State,
-				Country:     r.Location.Country,
-				CountryCode: r.Location.CountryCode,
-				Locode:      r.Location.Locode,
-				Latitude:    r.Location.Latitude,
-				Longitude:   r.Location.Longitude,
-				Timezone:    r.Location.Timezone,
-			},
-			Date:          r.Date,
-			Actual:        r.Actual,
-			PredictiveETA: r.PredictiveETA,
-		}
-		switch r.RouteType {
-		case "PREPOL":
-			routeResponse.Prepol = item
-		case "POL":
-			routeResponse.Pol = item
-		case "POD":
-			routeResponse.Pod = item
-		case "POSTPOD":
-			routeResponse.Postpod = item
-		}
-	}
-
-	var vessels []models.Vessel
-	err = r.db.DB.WithContext(ctx).
-		Joins("JOIN shipment_vessels sv ON sv.vessel_id = vessels.id").
-		Where("sv.shipment_id = ?", shipmentID).
-		Order("sv.added_at ASC").
-		Find(&vessels).Error
+	vessels, err := r.getShipmentVessels(ctx, shipmentID)
 	if err != nil {
 		return nil, err
 	}
 
-	vesselResponses := make([]dto.ShipmentVesselResponse, len(vessels))
-	for i, v := range vessels {
-		vesselResponses[i] = dto.ShipmentVesselResponse{
-			Name:     v.Name,
-			Imo:      v.Imo,
-			Mmsi:     v.Mmsi,
-			CallSign: v.CallSign,
-			Flag:     v.Flag,
-		}
-	}
-
-	var facilities []models.Facility
-	err = r.db.DB.WithContext(ctx).
-		Joins("JOIN shipment_facilities sf ON sf.facility_id = facilities.id").
-		Where("sf.shipment_id = ?", shipmentID).
-		Order("sf.added_at ASC").
-		Find(&facilities).Error
+	facilities, err := r.getShipmentFacilities(ctx, shipmentID)
 	if err != nil {
 		return nil, err
 	}
 
-	facilityResponses := make([]dto.ShipmentFacilityResponse, len(facilities))
-	for i, f := range facilities {
-		facilityResponses[i] = dto.ShipmentFacilityResponse{
-			Name:        f.Name,
-			CountryCode: f.CountryCode,
-			Locode:      f.Locode,
-			BicCode:     f.BicCode,
-			SmdgCode:    f.SmdgCode,
-			Latitude:    f.Latitude,
-			Longitude:   f.Longitude,
-		}
-	}
-
-	var containers []models.Container
-	err = r.db.DB.WithContext(ctx).
-		Joins("JOIN shipment_containers sc ON sc.container_id = containers.id").
-		Where("sc.shipment_id = ?", shipmentID).
-		Order("sc.added_at ASC").
-		Find(&containers).Error
+	containers, err := r.getShipmentContainers(ctx, shipmentID)
 	if err != nil {
 		return nil, err
 	}
 
-	containersResponse := make([]dto.ShipmentContainerResponse, len(containers))
-	for i, c := range containers {
-		containersResponse[i] = dto.ShipmentContainerResponse{
-			Number:   c.Number,
-			IsoCode:  c.IsoCode,
-			SizeType: c.SizeType,
-			Status:   c.Status,
-		}
-
-		var containerEvents []models.ContainerEvent
-		err = r.db.DB.WithContext(ctx).
-			Where("container_id = ?", containers[i].ID).
-			Find(&containerEvents).Error
-		if err != nil {
-			return nil, err
-		}
-
-		containerEventsResponse := make([]dto.ShipmentContainerEventResponse, len(containerEvents))
-		for i, ce := range containerEvents {
-			location, err := r.FindLocationByID(ctx, ce.LocationID)
-			if err != nil {
-				return nil, err
-			}
-			locationResponse := dto.ShipmentLocationResponse{
-				Name:        location.Name,
-				State:       location.State,
-				Country:     location.Country,
-				CountryCode: location.CountryCode,
-				Locode:      location.Locode,
-				Latitude:    location.Latitude,
-				Longitude:   location.Longitude,
-				Timezone:    location.Timezone,
-			}
-
-			containerEventsResponse[i] = dto.ShipmentContainerEventResponse{
-				Location:          locationResponse,
-				Description:       ce.Description,
-				EventType:         ce.EventType,
-				EventCode:         ce.EventCode,
-				Status:            ce.Status,
-				Date:              ce.Date,
-				IsActual:          ce.IsActual,
-				IsAdditionalEvent: ce.IsAdditionalEvent,
-				RouteType:         ce.RouteType,
-				TransportType:     ce.TransportType,
-				Voyage:            ce.Voyage,
-			}
-
-			if ce.FacilityID != nil {
-				facility, err := r.FindFacilityByID(ctx, ce.FacilityID)
-				if err != nil {
-					return nil, err
-				}
-
-				facilityResponse := dto.ShipmentFacilityResponse{
-					Name:        facility.Name,
-					CountryCode: facility.CountryCode,
-					Locode:      facility.Locode,
-					BicCode:     facility.BicCode,
-					SmdgCode:    facility.SmdgCode,
-					Latitude:    facility.Latitude,
-					Longitude:   facility.Longitude,
-				}
-				containerEventsResponse[i].Facility = &facilityResponse
-			}
-
-			if ce.VesselID != nil {
-				vessel, err := r.FindVesselByID(ctx, ce.VesselID)
-				if err != nil {
-					return nil, err
-				}
-
-				vesselResponse := dto.ShipmentVesselResponse{
-					Name:     vessel.Name,
-					Imo:      vessel.Imo,
-					Mmsi:     vessel.Mmsi,
-					CallSign: vessel.CallSign,
-					Flag:     vessel.Flag,
-				}
-				containerEventsResponse[i].Vessel = &vesselResponse
-			}
-
-		}
-		containersResponse[i].Events = containerEventsResponse
-	}
-
-	var routeSegments []models.RouteSegment
-	err = r.db.DB.WithContext(ctx).
-		Where("shipment_id = ?", shipmentID).
-		Order("segment_order ASC").
-		Find(&routeSegments).Error
+	routeData, err := r.getShipmentRouteData(ctx, shipmentID, shipment.ID)
 	if err != nil {
 		return nil, err
-	}
-
-	routeSegmentsResponse := make([]dto.ShipmentRouteSegmentResponse, 0, len(routeSegments))
-	for _, rs := range routeSegments {
-		routeSegmentResponse := dto.ShipmentRouteSegmentResponse{
-			RouteType:    rs.RouteType,
-			SegmentOrder: rs.SegmentOrder,
-		}
-
-		var routeSegmentPoints []models.RouteSegmentPoint
-		err = r.db.DB.WithContext(ctx).
-			Where("segment_id = ?", rs.ID).
-			Order("point_order ASC").
-			Find(&routeSegmentPoints).Error
-		if err != nil {
-			return nil, err
-		}
-
-		path := make([]dto.ShipmentRouteSegmentPointResponse, 0, len(routeSegmentPoints))
-		for _, rsp := range routeSegmentPoints {
-			routeSegmentPointResponse := dto.ShipmentRouteSegmentPointResponse{
-				Latitude:   rsp.Latitude,
-				Longitude:  rsp.Longitude,
-				PointOrder: rsp.PointOrder,
-			}
-			path = append(path, routeSegmentPointResponse)
-		}
-		routeSegmentResponse.Path = path
-		routeSegmentsResponse = append(routeSegmentsResponse, routeSegmentResponse)
-	}
-
-	var shipmentCoordinates *models.Coordinate
-	err = r.db.DB.WithContext(ctx).
-		Where("shipment_id = ?", shipment.ID).
-		Order("updated_at DESC").
-		First(&shipmentCoordinates).Error
-
-	shipmentCoordinatesResponse := dto.ShipmentCoordinatesResponse{
-		Latitude:  shipmentCoordinates.Latitude,
-		Longitude: shipmentCoordinates.Longitude,
-		UpdatedAt: shipmentCoordinates.UpdatedAt,
-	}
-
-	aisResponse, err := r.GetShipmentAisData(ctx, shipmentID)
-	if err != nil {
-		return nil, err
-	}
-	if aisResponse == nil {
-		return nil, fmt.Errorf("ais data not found for shipment: %s", shipmentID)
-	}
-
-	routeData := dto.ShipmentRouteDataResponse{
-		RouteSegments: routeSegmentsResponse,
-		Coordinates:   shipmentCoordinatesResponse,
-		Ais:           *aisResponse,
 	}
 
 	return &dto.ShipmentDetailsResponse{
@@ -704,11 +476,344 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		ShippingStatus: shipment.ShippingStatus,
 		CreatedAt:      shipment.CreatedAt,
 		UpdatedAt:      shipment.UpdatedAt,
-		Locations:      locationResponses,
-		Route:          routeResponse,
-		Vessels:        vesselResponses,
-		Facilities:     facilityResponses,
-		Containers:     containersResponse,
+		Locations:      locations,
+		Route:          route,
+		Vessels:        vessels,
+		Facilities:     facilities,
+		Containers:     containers,
 		RouteData:      routeData,
 	}, nil
+}
+
+// getShipmentLocations fetches and converts shipment locations
+func (r *shipmentRepository) getShipmentLocations(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentLocationResponse, error) {
+	var locations []models.Location
+	err := r.db.DB.WithContext(ctx).
+		Joins("JOIN shipment_locations sl ON sl.location_id = locations.id").
+		Where("sl.shipment_id = ?", shipmentID).
+		Order("sl.added_at ASC").
+		Find(&locations).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return r.convertLocationsToDTO(locations), nil
+}
+
+// getShipmentRoute fetches and converts shipment route
+func (r *shipmentRepository) getShipmentRoute(ctx context.Context, shipmentID uuid.UUID) (dto.ShipmentRouteResponse, error) {
+	var routes []models.ShipmentRoute
+	err := r.db.DB.WithContext(ctx).
+		Preload("Location").
+		Where("shipment_id = ?", shipmentID).
+		Find(&routes).Error
+	if err != nil {
+		return dto.ShipmentRouteResponse{}, err
+	}
+
+	return r.convertRouteToDTO(routes), nil
+}
+
+// getShipmentVessels fetches and converts shipment vessels
+func (r *shipmentRepository) getShipmentVessels(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentVesselResponse, error) {
+	var vessels []models.Vessel
+	err := r.db.DB.WithContext(ctx).
+		Joins("JOIN shipment_vessels sv ON sv.vessel_id = vessels.id").
+		Where("sv.shipment_id = ?", shipmentID).
+		Order("sv.added_at ASC").
+		Find(&vessels).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return r.convertVesselsToDTO(vessels), nil
+}
+
+// getShipmentFacilities fetches and converts shipment facilities
+func (r *shipmentRepository) getShipmentFacilities(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentFacilityResponse, error) {
+	var facilities []models.Facility
+	err := r.db.DB.WithContext(ctx).
+		Joins("JOIN shipment_facilities sf ON sf.facility_id = facilities.id").
+		Where("sf.shipment_id = ?", shipmentID).
+		Order("sf.added_at ASC").
+		Find(&facilities).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return r.convertFacilitiesToDTO(facilities), nil
+}
+
+// getShipmentContainers fetches and converts shipment containers with events
+func (r *shipmentRepository) getShipmentContainers(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentContainerResponse, error) {
+	var containers []models.Container
+	err := r.db.DB.WithContext(ctx).
+		Joins("JOIN shipment_containers sc ON sc.container_id = containers.id").
+		Where("sc.shipment_id = ?", shipmentID).
+		Order("sc.added_at ASC").
+		Find(&containers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	containersResponse := make([]dto.ShipmentContainerResponse, len(containers))
+	for i, container := range containers {
+		containerEvents, err := r.getContainerEvents(ctx, container.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		containersResponse[i] = dto.ShipmentContainerResponse{
+			Number:   container.Number,
+			IsoCode:  container.IsoCode,
+			SizeType: container.SizeType,
+			Status:   container.Status,
+			Events:   containerEvents,
+		}
+	}
+
+	return containersResponse, nil
+}
+
+// getContainerEvents fetches and converts container events
+func (r *shipmentRepository) getContainerEvents(ctx context.Context, containerID uuid.UUID) ([]dto.ShipmentContainerEventResponse, error) {
+	var containerEvents []models.ContainerEvent
+	err := r.db.DB.WithContext(ctx).
+		Where("container_id = ?", containerID).
+		Find(&containerEvents).Error
+	if err != nil {
+		return nil, err
+	}
+
+	eventResponses := make([]dto.ShipmentContainerEventResponse, len(containerEvents))
+	for i, event := range containerEvents {
+		eventResponse, err := r.convertContainerEventToDTO(ctx, event)
+		if err != nil {
+			return nil, err
+		}
+		eventResponses[i] = eventResponse
+	}
+
+	return eventResponses, nil
+}
+
+// convertContainerEventToDTO converts a container event to DTO with related data
+func (r *shipmentRepository) convertContainerEventToDTO(ctx context.Context, event models.ContainerEvent) (dto.ShipmentContainerEventResponse, error) {
+	location, err := r.FindLocationByID(ctx, event.LocationID)
+	if err != nil {
+		return dto.ShipmentContainerEventResponse{}, err
+	}
+
+	eventResponse := dto.ShipmentContainerEventResponse{
+		Location:          r.convertLocationToDTO(*location),
+		Description:       event.Description,
+		EventType:         event.EventType,
+		EventCode:         event.EventCode,
+		Status:            event.Status,
+		Date:              event.Date,
+		IsActual:          event.IsActual,
+		IsAdditionalEvent: event.IsAdditionalEvent,
+		RouteType:         event.RouteType,
+		TransportType:     event.TransportType,
+		Voyage:            event.Voyage,
+	}
+
+	if event.FacilityID != nil {
+		facility, err := r.FindFacilityByID(ctx, event.FacilityID)
+		if err != nil {
+			return dto.ShipmentContainerEventResponse{}, err
+		}
+		facilityResponse := r.convertFacilityToDTO(*facility)
+		eventResponse.Facility = &facilityResponse
+	}
+
+	if event.VesselID != nil {
+		vessel, err := r.FindVesselByID(ctx, event.VesselID)
+		if err != nil {
+			return dto.ShipmentContainerEventResponse{}, err
+		}
+		vesselResponse := r.convertVesselToDTO(*vessel)
+		eventResponse.Vessel = &vesselResponse
+	}
+
+	return eventResponse, nil
+}
+
+// getShipmentRouteData fetches and assembles route data including segments, coordinates, and AIS
+func (r *shipmentRepository) getShipmentRouteData(ctx context.Context, shipmentID, shipmentDbID uuid.UUID) (dto.ShipmentRouteDataResponse, error) {
+	routeSegments, err := r.getShipmentRouteSegments(ctx, shipmentID)
+	if err != nil {
+		return dto.ShipmentRouteDataResponse{}, err
+	}
+
+	coordinates, err := r.getShipmentCoordinates(ctx, shipmentDbID)
+	if err != nil {
+		return dto.ShipmentRouteDataResponse{}, err
+	}
+
+	aisResponse, err := r.GetShipmentAisData(ctx, shipmentID)
+	if err != nil {
+		return dto.ShipmentRouteDataResponse{}, err
+	}
+	if aisResponse == nil {
+		return dto.ShipmentRouteDataResponse{}, fmt.Errorf("ais data not found for shipment: %s", shipmentID)
+	}
+
+	return dto.ShipmentRouteDataResponse{
+		RouteSegments: routeSegments,
+		Coordinates:   coordinates,
+		Ais:           *aisResponse,
+	}, nil
+}
+
+// getShipmentRouteSegments fetches and converts route segments
+func (r *shipmentRepository) getShipmentRouteSegments(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentRouteSegmentResponse, error) {
+	var routeSegments []models.RouteSegment
+	err := r.db.DB.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Order("segment_order ASC").
+		Find(&routeSegments).Error
+	if err != nil {
+		return nil, err
+	}
+
+	routeSegmentsResponse := make([]dto.ShipmentRouteSegmentResponse, 0, len(routeSegments))
+	for _, segment := range routeSegments {
+		segmentResponse, err := r.convertRouteSegmentToDTO(ctx, segment)
+		if err != nil {
+			return nil, err
+		}
+		routeSegmentsResponse = append(routeSegmentsResponse, segmentResponse)
+	}
+
+	return routeSegmentsResponse, nil
+}
+
+// convertRouteSegmentToDTO converts a route segment with its points to DTO
+func (r *shipmentRepository) convertRouteSegmentToDTO(ctx context.Context, segment models.RouteSegment) (dto.ShipmentRouteSegmentResponse, error) {
+	var routeSegmentPoints []models.RouteSegmentPoint
+	err := r.db.DB.WithContext(ctx).
+		Where("segment_id = ?", segment.ID).
+		Order("point_order ASC").
+		Find(&routeSegmentPoints).Error
+	if err != nil {
+		return dto.ShipmentRouteSegmentResponse{}, err
+	}
+
+	path := make([]dto.ShipmentRouteSegmentPointResponse, 0, len(routeSegmentPoints))
+	for _, point := range routeSegmentPoints {
+		path = append(path, dto.ShipmentRouteSegmentPointResponse{
+			Latitude:   point.Latitude,
+			Longitude:  point.Longitude,
+			PointOrder: point.PointOrder,
+		})
+	}
+
+	return dto.ShipmentRouteSegmentResponse{
+		RouteType:    segment.RouteType,
+		SegmentOrder: segment.SegmentOrder,
+		Path:         path,
+	}, nil
+}
+
+// getShipmentCoordinates fetches the latest coordinates for a shipment
+func (r *shipmentRepository) getShipmentCoordinates(ctx context.Context, shipmentID uuid.UUID) (dto.ShipmentCoordinatesResponse, error) {
+	var shipmentCoordinates *models.Coordinate
+	err := r.db.DB.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Order("updated_at DESC").
+		First(&shipmentCoordinates).Error
+	if err != nil {
+		return dto.ShipmentCoordinatesResponse{}, err
+	}
+
+	return dto.ShipmentCoordinatesResponse{
+		Latitude:  shipmentCoordinates.Latitude,
+		Longitude: shipmentCoordinates.Longitude,
+		UpdatedAt: shipmentCoordinates.UpdatedAt,
+	}, nil
+}
+
+// Helper methods for converting models to DTOs
+
+func (r *shipmentRepository) convertLocationsToDTO(locations []models.Location) []dto.ShipmentLocationResponse {
+	locationResponses := make([]dto.ShipmentLocationResponse, len(locations))
+	for i, loc := range locations {
+		locationResponses[i] = r.convertLocationToDTO(loc)
+	}
+	return locationResponses
+}
+
+func (r *shipmentRepository) convertLocationToDTO(location models.Location) dto.ShipmentLocationResponse {
+	return dto.ShipmentLocationResponse{
+		Name:        location.Name,
+		State:       location.State,
+		Country:     location.Country,
+		CountryCode: location.CountryCode,
+		Locode:      location.Locode,
+		Latitude:    location.Latitude,
+		Longitude:   location.Longitude,
+		Timezone:    location.Timezone,
+	}
+}
+
+func (r *shipmentRepository) convertRouteToDTO(routes []models.ShipmentRoute) dto.ShipmentRouteResponse {
+	routeResponse := dto.ShipmentRouteResponse{}
+	for _, route := range routes {
+		item := &dto.ShipmentRoutePoint{
+			Location:      r.convertLocationToDTO(route.Location),
+			Date:          route.Date,
+			Actual:        route.Actual,
+			PredictiveETA: route.PredictiveETA,
+		}
+		switch route.RouteType {
+		case "PREPOL":
+			routeResponse.Prepol = item
+		case "POL":
+			routeResponse.Pol = item
+		case "POD":
+			routeResponse.Pod = item
+		case "POSTPOD":
+			routeResponse.Postpod = item
+		}
+	}
+	return routeResponse
+}
+
+func (r *shipmentRepository) convertVesselsToDTO(vessels []models.Vessel) []dto.ShipmentVesselResponse {
+	vesselResponses := make([]dto.ShipmentVesselResponse, len(vessels))
+	for i, vessel := range vessels {
+		vesselResponses[i] = r.convertVesselToDTO(vessel)
+	}
+	return vesselResponses
+}
+
+func (r *shipmentRepository) convertVesselToDTO(vessel models.Vessel) dto.ShipmentVesselResponse {
+	return dto.ShipmentVesselResponse{
+		Name:     vessel.Name,
+		Imo:      vessel.Imo,
+		Mmsi:     vessel.Mmsi,
+		CallSign: vessel.CallSign,
+		Flag:     vessel.Flag,
+	}
+}
+
+func (r *shipmentRepository) convertFacilitiesToDTO(facilities []models.Facility) []dto.ShipmentFacilityResponse {
+	facilityResponses := make([]dto.ShipmentFacilityResponse, len(facilities))
+	for i, facility := range facilities {
+		facilityResponses[i] = r.convertFacilityToDTO(facility)
+	}
+	return facilityResponses
+}
+
+func (r *shipmentRepository) convertFacilityToDTO(facility models.Facility) dto.ShipmentFacilityResponse {
+	return dto.ShipmentFacilityResponse{
+		Name:        facility.Name,
+		CountryCode: facility.CountryCode,
+		Locode:      facility.Locode,
+		BicCode:     facility.BicCode,
+		SmdgCode:    facility.SmdgCode,
+		Latitude:    facility.Latitude,
+		Longitude:   facility.Longitude,
+	}
 }
