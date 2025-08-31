@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go-starter/internal/modules/shipments/dto"
 	"go-starter/internal/modules/shipments/models"
@@ -9,6 +10,7 @@ import (
 	"log"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ShipmentService interface {
@@ -208,6 +210,62 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 			return nil, err
 		}
 		containers = append(containers, *createdContainer)
+
+		containerEvents := make([]models.ContainerEvent, 0, len(c.Events))
+		for _, ce := range c.Events {
+			location, err := s.repo.FindLocationByLocode(ctx, ce.Location.Locode)
+			if err != nil {
+				return nil, err
+			}
+
+			var facility *models.Facility
+			if ce.Facility != nil {
+				facility, err = s.repo.FindFacilityByLocode(ctx, ce.Facility.Locode)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			var vessel *models.Vessel
+			if ce.Vessel != nil {
+				vessel, err = s.repo.FindVesselByIMOAndMMSI(ctx, ce.Vessel.Imo, ce.Vessel.Mmsi)
+				if err != nil {
+					if !errors.Is(err, gorm.ErrRecordNotFound) {
+						return nil, err
+					}
+				}
+			}
+
+			containerEvent := models.ContainerEvent{
+				ContainerID:       createdContainer.ID,
+				LocationID:        location.ID,
+				Description:       ce.Description,
+				EventType:         ce.EventType,
+				EventCode:         ce.EventCode,
+				Status:            ce.Status,
+				Date:              ce.Date,
+				IsActual:          ce.IsActual,
+				IsAdditionalEvent: ce.IsAdditionalEvent,
+				RouteType:         ce.RouteType,
+				TransportType:     ce.TransportType,
+				Voyage:            ce.Voyage,
+			}
+
+			if vessel != nil {
+				containerEvent.VesselID = &vessel.ID
+			}
+
+			if facility != nil {
+				containerEvent.FacilityID = &facility.ID
+			}
+
+			createdContainerEvent, err := s.repo.CreateContainerEvent(ctx, &containerEvent)
+			if err != nil {
+				return nil, err
+			}
+			containerEvents = append(containerEvents, *createdContainerEvent)
+
+		}
 	}
 
 	log.Printf("Created shipment %s in database with ID: %s", req.ShipmentNumber, shipment.ID)

@@ -15,14 +15,14 @@ type ShipmentDetailsResponse struct {
 	ShippingStatus string                      `json:"shippingStatus"`
 	CreatedAt      time.Time                   `json:"createdAt"`
 	UpdatedAt      time.Time                   `json:"updatedAt"`
-	Locations      []LocationResponse          `json:"locations"`
+	Locations      []ShipmentLocationResponse  `json:"locations"`
 	Route          ShipmentRouteResponse       `json:"route"`
 	Vessels        []ShipmentVesselResponse    `json:"vessels"`
 	Facilities     []ShipmentFacilityResponse  `json:"facilities"`
 	Containers     []ShipmentContainerResponse `json:"containers"`
 }
 
-type LocationResponse struct {
+type ShipmentLocationResponse struct {
 	Name        string  `json:"name"`
 	State       *string `json:"state"`
 	Country     string  `json:"country"`
@@ -41,10 +41,10 @@ type ShipmentRouteResponse struct {
 }
 
 type ShipmentRoutePoint struct {
-	Location      LocationResponse `json:"location"`
-	Date          *time.Time       `json:"date"`
-	Actual        *bool            `json:"actual"`
-	PredictiveETA *time.Time       `json:"predictiveEta"`
+	Location      ShipmentLocationResponse `json:"location"`
+	Date          *time.Time               `json:"date"`
+	Actual        *bool                    `json:"actual"`
+	PredictiveETA *time.Time               `json:"predictiveEta"`
 }
 
 type ShipmentVesselResponse struct {
@@ -66,8 +66,25 @@ type ShipmentFacilityResponse struct {
 }
 
 type ShipmentContainerResponse struct {
-	Number   string `json:"number"`
-	IsoCode  string `json:"isoCode"`
-	SizeType string `json:"sizeType"`
-	Status   string `json:"status"`
+	Number   string                           `json:"number"`
+	IsoCode  string                           `json:"isoCode"`
+	SizeType string                           `json:"sizeType"`
+	Status   string                           `json:"status"`
+	Events   []ShipmentContainerEventResponse `json:"events"`
+}
+
+type ShipmentContainerEventResponse struct {
+	Location          ShipmentLocationResponse  `json:"location"`
+	Facility          *ShipmentFacilityResponse `json:"facility"`
+	Description       string                    `json:"description"`
+	EventType         *string                   `json:"eventType"`
+	EventCode         *string                   `json:"eventCode"`
+	Status            string                    `json:"status"`
+	Date              time.Time                 `json:"date"`
+	IsActual          bool                      `json:"isActual"`
+	IsAdditionalEvent bool                      `json:"isAdditionalEvent"`
+	RouteType         string                    `json:"routeType"`
+	TransportType     *string                   `json:"transportType"`
+	Vessel            *ShipmentVesselResponse   `json:"vessel"`
+	Voyage            *string                   `json:"voyage"`
 }

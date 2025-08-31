@@ -36,6 +36,9 @@ func main() {
 		&shipmentModels.ShipmentFacility{},
 		&shipmentModels.Container{},
 		&shipmentModels.ShipmentContainer{},
+		&shipmentModels.ContainerEvent{},
+		&shipmentModels.RouteSegment{},
+		&shipmentModels.RouteSegmentPoint{},
 	); err != nil {
 		log.Fatalf("Failed to run database migrations: %v", err)
 	}

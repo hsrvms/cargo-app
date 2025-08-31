@@ -63,3 +63,51 @@ func (sc *ShipmentContainer) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+type ContainerEvent struct {
+	ID                uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	ContainerID       uuid.UUID  `gorm:"type:uuid;not null;index"`
+	LocationID        uuid.UUID  `gorm:"type:uuid;index"`
+	FacilityID        *uuid.UUID `gorm:"type:uuid;index"`
+	Description       string     `gorm:"type:text"`
+	EventType         *string    `gorm:"type:varchar(100)"`
+	EventCode         *string    `gorm:"type:varchar(50)"`
+	Status            string     `gorm:"type:varchar(50);not null"`
+	Date              time.Time  `gorm:"type:timestamptz;not null"`
+	IsActual          bool       `gorm:"type:boolean;default:false"`
+	IsAdditionalEvent bool       `gorm:"type:boolean;default:false"`
+	RouteType         string     `gorm:"type:varchar(50)"`
+	TransportType     *string    `gorm:"type:varchar(50)"`
+	VesselID          *uuid.UUID `gorm:"type:uuid;index"`
+	Voyage            *string    `gorm:"type:varchar(255)"`
+	CreatedAt         time.Time  `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+	UpdatedAt         time.Time  `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+
+	Container Container `gorm:"foreignKey:ContainerID;constraint:OnDelete:CASCADE"`
+	Location  Location  `gorm:"foreignKey:LocationID"`
+	Facility  *Facility `gorm:"foreignKey:FacilityID"`
+	Vessel    *Vessel   `gorm:"foreignKey:VesselID"`
+}
+
+func (ContainerEvent) TableName() string {
+	return "container_events"
+}
+
+func (ce *ContainerEvent) BeforeCreate(tx *gorm.DB) error {
+	if ce.ID == uuid.Nil {
+		ce.ID = uuid.New()
+	}
+	now := time.Now()
+	if ce.CreatedAt.IsZero() {
+		ce.CreatedAt = now
+	}
+	if ce.UpdatedAt.IsZero() {
+		ce.UpdatedAt = now
+	}
+	return nil
+}
+
+func (ce *ContainerEvent) BeforeUpdate(tx *gorm.DB) error {
+	ce.UpdatedAt = time.Now()
+	return nil
+}

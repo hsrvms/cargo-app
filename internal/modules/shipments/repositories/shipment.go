@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go-starter/internal/modules/shipments/dto"
 	"go-starter/internal/modules/shipments/models"
@@ -23,10 +24,17 @@ type ShipmentRepository interface {
 	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error)
 	UpdateShipment(ctx context.Context, id uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
 	CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error)
+	FindLocationByLocode(ctx context.Context, locode string) (*models.Location, error)
+	FindLocationByID(ctx context.Context, id uuid.UUID) (*models.Location, error)
 	CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error)
 	CreateVessel(ctx context.Context, shipmentID *uuid.UUID, vessel *models.Vessel) (*models.Vessel, error)
+	FindVesselByIMOAndMMSI(ctx context.Context, imo, mmsi int) (*models.Vessel, error)
+	FindVesselByID(ctx context.Context, id *uuid.UUID) (*models.Vessel, error)
 	CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error)
+	FindFacilityByLocode(ctx context.Context, locode string) (*models.Facility, error)
+	FindFacilityByID(ctx context.Context, id *uuid.UUID) (*models.Facility, error)
 	CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error)
+	CreateContainerEvent(ctx context.Context, containerEvent *models.ContainerEvent) (*models.ContainerEvent, error)
 	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 }
 
@@ -187,6 +195,27 @@ func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uui
 	return location, nil
 }
 
+func (r *shipmentRepository) FindLocationByLocode(ctx context.Context, locode string) (*models.Location, error) {
+	var location models.Location
+	err := r.db.DB.WithContext(ctx).Where("locode = ?", locode).First(&location).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("location not found")
+		}
+		return nil, fmt.Errorf("failed to get location with locode: %s", locode)
+	}
+	return &location, nil
+}
+
+func (r *shipmentRepository) FindLocationByID(ctx context.Context, id uuid.UUID) (*models.Location, error) {
+	var location models.Location
+	err := r.db.DB.WithContext(ctx).First(&location, id).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get location with ID: %s", id)
+	}
+	return &location, nil
+}
+
 func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error) {
 	err := r.db.DB.WithContext(ctx).Where(route).FirstOrCreate(route).Error
 	if err != nil {
@@ -214,6 +243,28 @@ func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.
 	return vessel, nil
 }
 
+func (r *shipmentRepository) FindVesselByIMOAndMMSI(ctx context.Context, imo, mmsi int) (*models.Vessel, error) {
+	var vessel models.Vessel
+	err := r.db.DB.WithContext(ctx).Where("imo = ? AND mmsi = ?", imo, mmsi).First(&vessel).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("failed to get vessel with imo and mmsi: %d, %d", imo, mmsi)
+	}
+	return &vessel, nil
+}
+
+func (r *shipmentRepository) FindVesselByID(ctx context.Context, id *uuid.UUID) (*models.Vessel, error) {
+
+	var vessel models.Vessel
+	err := r.db.DB.WithContext(ctx).First(&vessel, id).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vessel with ID: %s", id)
+	}
+	return &vessel, nil
+}
+
 func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error) {
 	err := r.db.DB.WithContext(ctx).Where(facility).FirstOrCreate(facility).Error
 	if err != nil {
@@ -230,6 +281,27 @@ func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uui
 		}
 	}
 	return facility, err
+}
+
+func (r *shipmentRepository) FindFacilityByLocode(ctx context.Context, locode string) (*models.Facility, error) {
+	var facility models.Facility
+	err := r.db.DB.WithContext(ctx).Where("locode = ?", locode).First(&facility).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("location not found")
+		}
+		return nil, fmt.Errorf("failed to get location with locode: %s", locode)
+	}
+	return &facility, nil
+}
+
+func (r *shipmentRepository) FindFacilityByID(ctx context.Context, id *uuid.UUID) (*models.Facility, error) {
+	var facility models.Facility
+	err := r.db.DB.WithContext(ctx).First(&facility, id).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get facility with ID: %s", id)
+	}
+	return &facility, nil
 }
 
 func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error) {
@@ -250,6 +322,14 @@ func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uu
 	return container, nil
 }
 
+func (r *shipmentRepository) CreateContainerEvent(ctx context.Context, containerEvent *models.ContainerEvent) (*models.ContainerEvent, error) {
+	err := r.db.DB.WithContext(ctx).Where(containerEvent).FirstOrCreate(containerEvent).Error
+	if err != nil {
+		return nil, err
+	}
+	return containerEvent, nil
+}
+
 func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
 	shipment, err := r.GetShipmentByID(ctx, shipmentID)
 	if err != nil {
@@ -268,9 +348,9 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 	}
 
 	// Convert models.Location to dto.LocationResponse
-	locationResponses := make([]dto.LocationResponse, len(locations))
+	locationResponses := make([]dto.ShipmentLocationResponse, len(locations))
 	for i, loc := range locations {
-		locationResponses[i] = dto.LocationResponse{
+		locationResponses[i] = dto.ShipmentLocationResponse{
 			Name:        loc.Name,
 			State:       loc.State,
 			Country:     loc.Country,
@@ -294,7 +374,7 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 	routeResponse := dto.ShipmentRouteResponse{}
 	for _, r := range routes {
 		item := &dto.ShipmentRoutePoint{
-			Location: dto.LocationResponse{
+			Location: dto.ShipmentLocationResponse{
 				Name:        r.Location.Name,
 				State:       r.Location.State,
 				Country:     r.Location.Country,
@@ -382,6 +462,86 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 			SizeType: c.SizeType,
 			Status:   c.Status,
 		}
+
+		var containerEvents []models.ContainerEvent
+		err = r.db.DB.WithContext(ctx).
+			Where("container_id = ?", containers[i].ID).
+			Find(&containerEvents).Error
+		if err != nil {
+			return nil, err
+		}
+
+		containerEventsResponse := make([]dto.ShipmentContainerEventResponse, len(containerEvents))
+		for i, ce := range containerEvents {
+			location, err := r.FindLocationByID(ctx, ce.LocationID)
+			if err != nil {
+				return nil, err
+			}
+			locationResponse := dto.ShipmentLocationResponse{
+				Name:        location.Name,
+				State:       location.State,
+				Country:     location.Country,
+				CountryCode: location.CountryCode,
+				Locode:      location.Locode,
+				Latitude:    location.Latitude,
+				Longitude:   location.Longitude,
+				Timezone:    location.Timezone,
+			}
+
+			containerEventsResponse[i] = dto.ShipmentContainerEventResponse{
+				Location: locationResponse,
+				// Facility: ce.FacilityID,
+				Description:       ce.Description,
+				EventType:         ce.EventType,
+				EventCode:         ce.EventCode,
+				Status:            ce.Status,
+				Date:              ce.Date,
+				IsActual:          ce.IsActual,
+				IsAdditionalEvent: ce.IsAdditionalEvent,
+				RouteType:         ce.RouteType,
+				TransportType:     ce.TransportType,
+				// Vessel:            ce.VesselID,
+				Voyage: ce.Voyage,
+			}
+
+			if ce.FacilityID != nil {
+				facility, err := r.FindFacilityByID(ctx, ce.FacilityID)
+				if err != nil {
+					return nil, err
+				}
+
+				facilityResponse := dto.ShipmentFacilityResponse{
+					Name:        facility.Name,
+					CountryCode: facility.CountryCode,
+					Locode:      facility.Locode,
+					BicCode:     facility.BicCode,
+					SmdgCode:    facility.SmdgCode,
+					Latitude:    facility.Latitude,
+					Longitude:   facility.Longitude,
+				}
+				containerEventsResponse[i].Facility = &facilityResponse
+			}
+
+			if ce.VesselID != nil {
+				vessel, err := r.FindVesselByID(ctx, ce.VesselID)
+				if err != nil {
+					return nil, err
+				}
+
+				vesselResponse := dto.ShipmentVesselResponse{
+					Name:     vessel.Name,
+					Imo:      vessel.Imo,
+					Mmsi:     vessel.Mmsi,
+					CallSign: vessel.CallSign,
+					Flag:     vessel.Flag,
+				}
+				containerEventsResponse[i].Vessel = &vesselResponse
+			}
+
+		}
+
+		containersResponse[i].Events = containerEventsResponse
+
 	}
 
 	return &dto.ShipmentDetailsResponse{

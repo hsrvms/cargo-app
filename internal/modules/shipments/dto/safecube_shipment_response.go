@@ -79,19 +79,19 @@ type SafeCubeContainer struct {
 }
 
 type SafeCubeEvent struct {
-	Location          SafeCubeLocation `json:"location"`
-	Facility          SafeCubeFacility `json:"facility"`
-	Description       string           `json:"description"`
-	EventType         string           `json:"eventType"`
-	EventCode         string           `json:"eventCode"`
-	Status            string           `json:"status"`
-	Date              time.Time        `json:"date"`
-	IsActual          bool             `json:"isActual"`
-	IsAdditionalEvent bool             `json:"isAdditionalEvent"`
-	RouteType         string           `json:"routeType"`
-	TransportType     *string          `json:"transportType"`
-	Vessel            *SafeCubeVessel  `json:"vessel"`
-	Voyage            *string          `json:"voyage"`
+	Location          SafeCubeLocation  `json:"location"`
+	Facility          *SafeCubeFacility `json:"facility"`
+	Description       string            `json:"description"`
+	EventType         *string           `json:"eventType"`
+	EventCode         *string           `json:"eventCode"`
+	Status            string            `json:"status"`
+	Date              time.Time         `json:"date"`
+	IsActual          bool              `json:"isActual"`
+	IsAdditionalEvent bool              `json:"isAdditionalEvent"`
+	RouteType         string            `json:"routeType"`
+	TransportType     *string           `json:"transportType"`
+	Vessel            *SafeCubeVessel   `json:"vessel"`
+	Voyage            *string           `json:"voyage"`
 }
 
 type SafeCubeRouteData struct {
