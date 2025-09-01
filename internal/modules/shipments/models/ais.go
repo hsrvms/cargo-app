@@ -32,7 +32,7 @@ type Ais struct {
 	VesselID                 *uuid.UUID `gorm:"type:uuid"`
 	LastVesselPositionLat    *float64   `gorm:"type:decimal(10,8)"`
 	LastVesselPositionLng    *float64   `gorm:"type:decimal(11,8)"`
-	LastVesselPositionUpdate *time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+	LastVesselPositionUpdate *time.Time `gorm:"type:timestamptz"`
 
 	CreatedAt time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	UpdatedAt time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`

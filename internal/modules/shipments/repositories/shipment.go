@@ -50,6 +50,19 @@ type ShipmentRepository interface {
 	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
 
 	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
+
+	// Delete methods for cleaning up shipment related data
+	DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteShipmentVessels(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteShipmentFacilities(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteShipmentContainers(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteRouteSegments(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteShipmentCoordinates(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteShipmentAis(ctx context.Context, shipmentID uuid.UUID) error
+	DeleteAllShipmentRelatedData(ctx context.Context, shipmentID uuid.UUID) error
+	GetDB() *db.Database
+	GetShipmentDataSummary(ctx context.Context, shipmentID uuid.UUID) (*ShipmentDataSummary, error)
 }
 
 type shipmentRepository struct {
@@ -76,7 +89,8 @@ func (r *shipmentRepository) CreateShipment(
 	userID uuid.UUID,
 	shipment *models.Shipment,
 ) (*models.Shipment, error) {
-	if err := r.db.DB.WithContext(ctx).Create(&shipment).Error; err != nil {
+	db := r.getDBFromContext(ctx)
+	if err := db.WithContext(ctx).Create(&shipment).Error; err != nil {
 		return nil, fmt.Errorf("failed to create shipment: %w", err)
 	}
 
@@ -84,7 +98,8 @@ func (r *shipmentRepository) CreateShipment(
 		UserID:     userID,
 		ShipmentID: shipment.ID,
 	}
-	if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
+
+	if err := db.WithContext(ctx).Create(&link).Error; err != nil {
 		return nil, fmt.Errorf("failed to link shipment to user: %w", err)
 	}
 
@@ -191,7 +206,8 @@ func (r *shipmentRepository) UpdateShipment(ctx context.Context, id uuid.UUID, u
 }
 
 func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error) {
-	err := r.db.DB.WithContext(ctx).Where(location).FirstOrCreate(location).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(location).FirstOrCreate(location).Error
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +217,9 @@ func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uui
 			ShipmentID: *shipmentID,
 			LocationID: location.ID,
 		}
-		if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
+
+		err := db.WithContext(ctx).Where(&link).FirstOrCreate(&link).Error
+		if err != nil {
 			return nil, fmt.Errorf("failed to link location to shipment: %w", err)
 		}
 	}
@@ -231,7 +249,8 @@ func (r *shipmentRepository) FindLocationByID(ctx context.Context, id uuid.UUID)
 }
 
 func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error) {
-	err := r.db.DB.WithContext(ctx).Where(route).FirstOrCreate(route).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(route).FirstOrCreate(route).Error
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +258,8 @@ func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.Ship
 }
 
 func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.UUID, vessel *models.Vessel) (*models.Vessel, error) {
-	err := r.db.DB.WithContext(ctx).Where(vessel).FirstOrCreate(vessel).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(vessel).FirstOrCreate(vessel).Error
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +269,9 @@ func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.
 			ShipmentID: *shipmentID,
 			VesselID:   vessel.ID,
 		}
-		if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
+
+		err := db.WithContext(ctx).Where(&link).FirstOrCreate(&link).Error
+		if err != nil {
 			return nil, fmt.Errorf("failed to link vessel to shipment: %w", err)
 		}
 	}
@@ -280,7 +302,8 @@ func (r *shipmentRepository) FindVesselByID(ctx context.Context, id *uuid.UUID) 
 }
 
 func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error) {
-	err := r.db.DB.WithContext(ctx).Where(facility).FirstOrCreate(facility).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(facility).FirstOrCreate(facility).Error
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +313,9 @@ func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uui
 			ShipmentID: *shipmentID,
 			FacilityID: facility.ID,
 		}
-		if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
+
+		err := db.WithContext(ctx).Where(&link).FirstOrCreate(&link).Error
+		if err != nil {
 			return nil, fmt.Errorf("failed to link facility to shipment: %w", err)
 		}
 	}
@@ -319,7 +344,8 @@ func (r *shipmentRepository) FindFacilityByID(ctx context.Context, id *uuid.UUID
 }
 
 func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error) {
-	err := r.db.DB.WithContext(ctx).Where(container).FirstOrCreate(container).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(container).FirstOrCreate(container).Error
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +355,9 @@ func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uu
 			ShipmentID:  *shipmentID,
 			ContainerID: container.ID,
 		}
-		if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
+
+		err := db.WithContext(ctx).Where(&link).FirstOrCreate(&link).Error
+		if err != nil {
 			return nil, fmt.Errorf("failed to link container to shipment: %w", err)
 		}
 	}
@@ -337,7 +365,8 @@ func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uu
 }
 
 func (r *shipmentRepository) CreateContainerEvent(ctx context.Context, containerEvent *models.ContainerEvent) (*models.ContainerEvent, error) {
-	err := r.db.DB.WithContext(ctx).Where(containerEvent).FirstOrCreate(containerEvent).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(containerEvent).FirstOrCreate(containerEvent).Error
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +374,8 @@ func (r *shipmentRepository) CreateContainerEvent(ctx context.Context, container
 }
 
 func (r *shipmentRepository) CreateRouteSegment(ctx context.Context, routeSegment *models.RouteSegment) (*models.RouteSegment, error) {
-	err := r.db.DB.WithContext(ctx).Where(routeSegment).FirstOrCreate(routeSegment).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(routeSegment).FirstOrCreate(routeSegment).Error
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +383,8 @@ func (r *shipmentRepository) CreateRouteSegment(ctx context.Context, routeSegmen
 }
 
 func (r *shipmentRepository) CreateRouteSegmentPoint(ctx context.Context, point *models.RouteSegmentPoint) (*models.RouteSegmentPoint, error) {
-	err := r.db.DB.WithContext(ctx).Where(point).FirstOrCreate(point).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(point).FirstOrCreate(point).Error
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +392,8 @@ func (r *shipmentRepository) CreateRouteSegmentPoint(ctx context.Context, point 
 }
 
 func (r *shipmentRepository) CreateCoordinate(ctx context.Context, coordinate *models.Coordinate) (*models.Coordinate, error) {
-	err := r.db.DB.WithContext(ctx).Where(coordinate).FirstOrCreate(coordinate).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(coordinate).FirstOrCreate(coordinate).Error
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +401,8 @@ func (r *shipmentRepository) CreateCoordinate(ctx context.Context, coordinate *m
 }
 
 func (r *shipmentRepository) CreateAis(ctx context.Context, ais *models.Ais) (*models.Ais, error) {
-	err := r.db.DB.WithContext(ctx).Where(ais).FirstOrCreate(ais).Error
+	db := r.getDBFromContext(ctx)
+	err := db.WithContext(ctx).Where(ais).FirstOrCreate(ais).Error
 	if err != nil {
 		return nil, err
 	}
@@ -816,4 +849,312 @@ func (r *shipmentRepository) convertFacilityToDTO(facility models.Facility) dto.
 		Latitude:    facility.Latitude,
 		Longitude:   facility.Longitude,
 	}
+}
+
+// Delete methods for cleaning up shipment related data
+
+func (r *shipmentRepository) DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.ShipmentLocation{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete shipment locations: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d location relationships for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+func (r *shipmentRepository) DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.ShipmentRoute{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete shipment routes: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d routes for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+func (r *shipmentRepository) DeleteShipmentVessels(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.ShipmentVessel{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete shipment vessels: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d vessel relationships for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+func (r *shipmentRepository) DeleteShipmentFacilities(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.ShipmentFacility{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete shipment facilities: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d facility relationships for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+func (r *shipmentRepository) DeleteShipmentContainers(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.ShipmentContainer{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete shipment containers: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d container relationships for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+func (r *shipmentRepository) DeleteRouteSegments(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.RouteSegment{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete route segments: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d route segments for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+func (r *shipmentRepository) DeleteShipmentCoordinates(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.Coordinate{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete coordinates: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d coordinates for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+func (r *shipmentRepository) DeleteShipmentAis(ctx context.Context, shipmentID uuid.UUID) error {
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	result := db.WithContext(ctx).
+		Where("shipment_id = ?", shipmentID).
+		Delete(&models.Ais{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete AIS data: %w", result.Error)
+	}
+
+	log.Printf("Deleted %d AIS records for shipment %s", result.RowsAffected, shipmentID)
+	return nil
+}
+
+// DeleteAllShipmentRelatedData deletes all related data for a shipment in the correct order
+func (r *shipmentRepository) DeleteAllShipmentRelatedData(ctx context.Context, shipmentID uuid.UUID) error {
+	// Validate input
+	if shipmentID == uuid.Nil {
+		return fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	log.Printf("Starting cleanup of all related data for shipment ID: %s", shipmentID)
+
+	// Delete in reverse order of dependencies to avoid constraint violations
+	// Keep track of what was deleted for rollback if needed
+
+	// Delete AIS data
+	log.Printf("Deleting AIS data for shipment %s", shipmentID)
+	if err := r.DeleteShipmentAis(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete AIS data for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete AIS data: %w", err)
+	}
+
+	// Delete coordinates
+	log.Printf("Deleting coordinates for shipment %s", shipmentID)
+	if err := r.DeleteShipmentCoordinates(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete coordinates for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete coordinates: %w", err)
+	}
+
+	// Delete route segments (this will cascade delete route segment points)
+	log.Printf("Deleting route segments for shipment %s", shipmentID)
+	if err := r.DeleteRouteSegments(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete route segments for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete route segments: %w", err)
+	}
+
+	// Delete container relationships (this will cascade delete container events)
+	log.Printf("Deleting container relationships for shipment %s", shipmentID)
+	if err := r.DeleteShipmentContainers(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete containers for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete containers: %w", err)
+	}
+
+	// Delete facility relationships
+	log.Printf("Deleting facility relationships for shipment %s", shipmentID)
+	if err := r.DeleteShipmentFacilities(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete facilities for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete facilities: %w", err)
+	}
+
+	// Delete vessel relationships
+	log.Printf("Deleting vessel relationships for shipment %s", shipmentID)
+	if err := r.DeleteShipmentVessels(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete vessels for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete vessels: %w", err)
+	}
+
+	// Delete routes
+	log.Printf("Deleting routes for shipment %s", shipmentID)
+	if err := r.DeleteShipmentRoutes(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete routes for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete routes: %w", err)
+	}
+
+	// Delete location relationships
+	log.Printf("Deleting location relationships for shipment %s", shipmentID)
+	if err := r.DeleteShipmentLocations(ctx, shipmentID); err != nil {
+		log.Printf("Failed to delete locations for shipment %s: %v", shipmentID, err)
+		return fmt.Errorf("failed to delete locations: %w", err)
+	}
+
+	log.Printf("Successfully deleted all related data for shipment %s", shipmentID)
+	return nil
+}
+
+// GetDB returns the database instance
+func (r *shipmentRepository) GetDB() *db.Database {
+	return r.db
+}
+
+// getDBFromContext extracts database instance from context or returns default
+func (r *shipmentRepository) getDBFromContext(ctx context.Context) *gorm.DB {
+	if tx, ok := ctx.Value("tx").(*gorm.DB); ok {
+		return tx
+	}
+	return r.db.DB
+}
+
+// ShipmentDataSummary holds counts of related data for a shipment
+type ShipmentDataSummary struct {
+	ShipmentID           uuid.UUID `json:"shipmentId"`
+	LocationsCount       int64     `json:"locationsCount"`
+	RoutesCount          int64     `json:"routesCount"`
+	VesselsCount         int64     `json:"vesselsCount"`
+	FacilitiesCount      int64     `json:"facilitiesCount"`
+	ContainersCount      int64     `json:"containersCount"`
+	ContainerEventsCount int64     `json:"containerEventsCount"`
+	RouteSegmentsCount   int64     `json:"routeSegmentsCount"`
+	CoordinatesCount     int64     `json:"coordinatesCount"`
+	AisCount             int64     `json:"aisCount"`
+}
+
+// GetShipmentDataSummary returns a summary of all related data for a shipment
+func (r *shipmentRepository) GetShipmentDataSummary(ctx context.Context, shipmentID uuid.UUID) (*ShipmentDataSummary, error) {
+	if shipmentID == uuid.Nil {
+		return nil, fmt.Errorf("invalid shipment ID: cannot be nil")
+	}
+
+	db := r.getDBFromContext(ctx)
+	summary := &ShipmentDataSummary{ShipmentID: shipmentID}
+
+	// Count locations
+	if err := db.WithContext(ctx).Model(&models.ShipmentLocation{}).Where("shipment_id = ?", shipmentID).Count(&summary.LocationsCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count locations: %w", err)
+	}
+
+	// Count routes
+	if err := db.WithContext(ctx).Model(&models.ShipmentRoute{}).Where("shipment_id = ?", shipmentID).Count(&summary.RoutesCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count routes: %w", err)
+	}
+
+	// Count vessels
+	if err := db.WithContext(ctx).Model(&models.ShipmentVessel{}).Where("shipment_id = ?", shipmentID).Count(&summary.VesselsCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count vessels: %w", err)
+	}
+
+	// Count facilities
+	if err := db.WithContext(ctx).Model(&models.ShipmentFacility{}).Where("shipment_id = ?", shipmentID).Count(&summary.FacilitiesCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count facilities: %w", err)
+	}
+
+	// Count containers
+	if err := db.WithContext(ctx).Model(&models.ShipmentContainer{}).Where("shipment_id = ?", shipmentID).Count(&summary.ContainersCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count containers: %w", err)
+	}
+
+	// Count container events (via containers)
+	var containerIDs []uuid.UUID
+	if err := db.WithContext(ctx).Model(&models.ShipmentContainer{}).Where("shipment_id = ?", shipmentID).Pluck("container_id", &containerIDs).Error; err != nil {
+		return nil, fmt.Errorf("failed to get container IDs: %w", err)
+	}
+	if len(containerIDs) > 0 {
+		if err := db.WithContext(ctx).Model(&models.ContainerEvent{}).Where("container_id IN ?", containerIDs).Count(&summary.ContainerEventsCount).Error; err != nil {
+			return nil, fmt.Errorf("failed to count container events: %w", err)
+		}
+	}
+
+	// Count route segments
+	if err := db.WithContext(ctx).Model(&models.RouteSegment{}).Where("shipment_id = ?", shipmentID).Count(&summary.RouteSegmentsCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count route segments: %w", err)
+	}
+
+	// Count coordinates
+	if err := db.WithContext(ctx).Model(&models.Coordinate{}).Where("shipment_id = ?", shipmentID).Count(&summary.CoordinatesCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count coordinates: %w", err)
+	}
+
+	// Count AIS records
+	if err := db.WithContext(ctx).Model(&models.Ais{}).Where("shipment_id = ?", shipmentID).Count(&summary.AisCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count AIS records: %w", err)
+	}
+
+	return summary, nil
 }
