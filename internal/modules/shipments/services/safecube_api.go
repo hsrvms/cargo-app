@@ -12,10 +12,6 @@ import (
 	"time"
 )
 
-type SafeCubeAPIService interface {
-	GetShipmentDetails(ctx context.Context, shipmentNumber, shipmentType, sealine string) (*shipmentsDto.SafeCubeAPIShipmentResponse, error)
-}
-
 type safeCubeAPIService struct {
 	httpClient *http.Client
 	baseUrl    string

@@ -187,3 +187,59 @@ func (h *shipmentAPIHandler) GetShipmentDetails(c echo.Context) error {
 		"shipment_details": shipmentDetails,
 	})
 }
+
+func (h *shipmentAPIHandler) DeleteUserShipment(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	userID, err := authService.GetUserIDFromContext(c)
+	if err != nil {
+		return c.Redirect(http.StatusTemporaryRedirect, "/login")
+	}
+
+	idStr := c.Param("id")
+	shipmentID, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid shipment id",
+		})
+	}
+
+	err = h.shipmentService.DeleteUserShipment(ctx, userID, shipmentID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"message": "success",
+	})
+}
+
+func (h *shipmentAPIHandler) BulkDeleteUserShipments(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	userID, err := authService.GetUserIDFromContext(c)
+	if err != nil {
+		return c.Redirect(http.StatusTemporaryRedirect, "/login")
+	}
+
+	var req dto.BulkDeleteUserShipmentsRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	err = h.shipmentService.BulkDeleteUserShipments(ctx, userID, req.ShipmentIDs)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "success",
+	})
+
+}

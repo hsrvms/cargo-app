@@ -14,15 +14,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type ShipmentService interface {
-	AddShipment(ctx context.Context, userID uuid.UUID, req *dto.AddShipmentRequest) (*models.Shipment, error)
-	GetShipmentByNumber(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error)
-	GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
-	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
-	SyncShipment(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error)
-	RefreshShipment(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
-}
-
 type shipmentService struct {
 	repo               repositories.ShipmentRepository
 	safeCubeAPIService SafeCubeAPIService
@@ -40,7 +31,6 @@ func (s *shipmentService) AddShipment(
 	userID uuid.UUID,
 	req *dto.AddShipmentRequest,
 ) (*models.Shipment, error) {
-
 	alreadyTracking, err := s.repo.CheckUserAlreadyTracking(ctx, userID, req.ShipmentNumber)
 	if err != nil {
 		return nil, err
@@ -59,7 +49,7 @@ func (s *shipmentService) AddShipment(
 			return nil, err
 		}
 
-		shipment, err = s.SyncShipment(ctx, shipment.ID)
+		shipment, err = s.SyncShipment(ctx, userID, shipment.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -386,7 +376,7 @@ func (s *shipmentService) GetShipmentByID(
 		return nil, fmt.Errorf("shipment not found or access denied")
 	}
 
-	shipment, err := s.repo.GetShipmentByID(ctx, shipmentID)
+	shipment, err := s.repo.GetShipmentByID(ctx, userID, shipmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -394,12 +384,12 @@ func (s *shipmentService) GetShipmentByID(
 }
 
 // validateShipmentForSync validates that a shipment exists and can be synced
-func (s *shipmentService) validateShipmentForSync(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error) {
+func (s *shipmentService) validateShipmentForSync(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error) {
 	if shipmentID == uuid.Nil {
 		return nil, fmt.Errorf("invalid shipment ID: cannot be nil")
 	}
 
-	shipment, err := s.repo.GetShipmentByID(ctx, shipmentID)
+	shipment, err := s.repo.GetShipmentByID(ctx, userID, shipmentID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("shipment not found: %s", shipmentID)
@@ -714,9 +704,9 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	return stats, nil
 }
 
-func (s *shipmentService) SyncShipment(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error) {
+func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error) {
 	// Validate shipment before starting sync
-	existingShipment, err := s.validateShipmentForSync(ctx, shipmentID)
+	existingShipment, err := s.validateShipmentForSync(ctx, userID, shipmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -848,7 +838,7 @@ func (s *shipmentService) RefreshShipment(ctx context.Context, userID, shipmentI
 	}
 
 	log.Printf("User %s authorized to refresh shipment %s", userID, shipmentID)
-	shipment, err := s.SyncShipment(ctx, shipmentID)
+	shipment, err := s.SyncShipment(ctx, userID, shipmentID)
 	if err != nil {
 		log.Printf("Failed to sync shipment %s for user %s: %v", shipmentID, userID, err)
 		return nil, err
@@ -867,11 +857,26 @@ func (s *shipmentService) GetShipmentDetails(ctx context.Context, userID, shipme
 		return nil, fmt.Errorf("shipment not found or access denied")
 	}
 
-	shipmentDetails, err := s.repo.GetShipmentDetails(ctx, shipmentID)
+	shipmentDetails, err := s.repo.GetShipmentDetails(ctx, userID, shipmentID)
 	if err != nil {
 		return nil, err
 	}
 
 	return shipmentDetails, nil
+}
 
+func (s *shipmentService) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {
+	err := s.repo.DeleteUserShipment(ctx, userID, shipmentID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *shipmentService) BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error {
+	err := s.repo.BulkDeleteUserShipments(ctx, userID, shipmentIDs)
+	if err != nil {
+		return err
+	}
+	return nil
 }

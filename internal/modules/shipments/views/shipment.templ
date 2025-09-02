@@ -1,0 +1,69 @@
+package views
+
+import "go-starter/internal/modules/shipments/views/components"
+
+templ ShipmentPage() {
+	<!DOCTYPE html>
+	<html
+		lang="en"
+		x-data="{
+			theme: localStorage.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+		}"
+		:class="{ 'dark': theme === 'dark' }"
+		x-init="$watch('theme', value => localStorage.theme = value)"
+	>
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Shipment Management</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<script src="/assets/js/htmx.min.js" defer></script>
+			<script src="/assets/js/htmx-ext-response-targets.js" defer></script>
+			<script src="/assets/js/ag-grid-enterprise.min.js"></script>
+			// <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+			<script>
+				tailwind.config = {
+					darkMode: 'class', // important! must be 'class' for toggle to work
+					theme: {
+					  extend: {
+							colors: {
+     							primary: '#3B82F6',
+     							secondary: '#6B7280'
+   							}
+     					}
+					}
+				}
+			</script>
+			<style>
+				.ag-theme-alpine {
+					--ag-background-color: rgb(255, 255, 255);
+					--ag-header-background-color: rgb(249, 250, 251);
+					--ag-odd-row-background-color: rgb(249, 250, 251);
+					--ag-border-color: rgb(229, 231, 235);
+				}
+				.dark .ag-theme-alpine {
+					--ag-background-color: rgb(17, 24, 39);
+					--ag-header-background-color: rgb(31, 41, 55);
+					--ag-odd-row-background-color: rgb(31, 41, 55);
+					--ag-border-color: rgb(55, 65, 81);
+					--ag-foreground-color: rgb(243, 244, 246);
+					--ag-secondary-foreground-color: rgb(156, 163, 175);
+				}
+			</style>
+		</head>
+		<body class="min-h-screen bg-gray-50 dark:bg-gray-900">
+			<div class="container mx-auto px-4 py-8">
+				@components.Header()
+				@components.AddShipmentForm()
+				<!-- Main Content Area -->
+				<div class="grid grid-cols-1 gap-8">
+					@components.ShipmentsGrid()
+					@components.ShipmentsMap()
+				</div>
+			</div>
+			<!-- ag-Grid Setup Script -->
+			<script src="/assets/shipment/js/ag-grid.js"></script>
+		</body>
+	</html>
+}

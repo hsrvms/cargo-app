@@ -14,10 +14,11 @@ import (
 )
 
 type ShipmentRepository interface {
-	NewTx() *gorm.DB
+	GetDB() *db.Database
+
 	CreateShipment(ctx context.Context, userID uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
 	GetShipmentByNumber(ctx context.Context, shipmentNumber string) (*models.Shipment, error)
-	GetShipmentByID(ctx context.Context, id uuid.UUID) (*models.Shipment, error)
+	GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
 	CheckUserAlreadyTracking(ctx context.Context, userID uuid.UUID, shipmentNumber string) (bool, error)
 	CheckUserOwnsShipment(ctx context.Context, userID, shipmentID uuid.UUID) (bool, error)
 	CheckShipmentExists(ctx context.Context, shipmentNumber string) (bool, error)
@@ -49,9 +50,8 @@ type ShipmentRepository interface {
 	CreateAis(ctx context.Context, ais *models.Ais) (*models.Ais, error)
 	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
 
-	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
+	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 
-	// Delete methods for cleaning up shipment related data
 	DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentVessels(ctx context.Context, shipmentID uuid.UUID) error
@@ -61,8 +61,11 @@ type ShipmentRepository interface {
 	DeleteShipmentCoordinates(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentAis(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteAllShipmentRelatedData(ctx context.Context, shipmentID uuid.UUID) error
-	GetDB() *db.Database
 	GetShipmentDataSummary(ctx context.Context, shipmentID uuid.UUID) (*ShipmentDataSummary, error)
+
+	GetShipmentsForGrid(ctx context.Context, userID uuid.UUID, req *dto.GridDataRequest) ([]models.Shipment, int, error)
+	DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error
+	BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error
 }
 
 type shipmentRepository struct {
@@ -77,11 +80,6 @@ func NewShipmentRepository(db *db.Database) ShipmentRepository {
 	return &shipmentRepository{
 		db: db,
 	}
-}
-
-func (r *shipmentRepository) NewTx() *gorm.DB {
-	tx := r.db.DB.Begin()
-	return tx
 }
 
 func (r *shipmentRepository) CreateShipment(
@@ -115,11 +113,17 @@ func (r *shipmentRepository) GetShipmentByNumber(ctx context.Context, shipmentNu
 	return &shipment, nil
 }
 
-func (r *shipmentRepository) GetShipmentByID(ctx context.Context, id uuid.UUID) (*models.Shipment, error) {
+func (r *shipmentRepository) GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error) {
 	var shipment models.Shipment
-	err := r.db.DB.WithContext(ctx).First(&shipment, id).Error
+	err := r.db.DB.WithContext(ctx).
+		Joins("JOIN user_shipments us ON us.shipment_id = shipments.id").
+		Where("us.user_id = ? AND shipments.id = ?", userID, shipmentID).
+		First(&shipment).Error
 	if err != nil {
-		return nil, fmt.Errorf("failed to get shipment with ID: %s", id)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("shipment not found or access denied")
+		}
+		return nil, fmt.Errorf("failed to get shipment: %w", err)
 	}
 	return &shipment, nil
 }
@@ -464,8 +468,8 @@ func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID 
 	return &aisResponse, nil
 }
 
-func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
-	shipment, err := r.GetShipmentByID(ctx, shipmentID)
+func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
+	shipment, err := r.GetShipmentByID(ctx, userID, shipmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -1157,4 +1161,102 @@ func (r *shipmentRepository) GetShipmentDataSummary(ctx context.Context, shipmen
 	}
 
 	return summary, nil
+}
+
+func (r *shipmentRepository) GetShipmentsForGrid(ctx context.Context, userID uuid.UUID, req *dto.GridDataRequest) ([]models.Shipment, int, error) {
+	db := r.db.DB.WithContext(ctx)
+
+	query := db.Model(&models.Shipment{}).
+		Joins("JOIN user_shipments us ON us.shipment_id = shipments.id").
+		Where("us.user_id = ?", userID)
+
+	if req.FilterModel != nil {
+		for field, filter := range req.FilterModel {
+			switch field {
+			case "shipmentNumber":
+				if filter.Filter != "" {
+					query = query.Where("shipments.shipment_number ILIKE ?", "%"+filter.Filter+"%")
+				}
+			case "shipmentType":
+				if len(filter.Values) > 0 {
+					query = query.Where("shipments.shipment_type IN ?", filter.Values)
+				}
+			case "sealineCode":
+				if filter.Filter != "" {
+					query = query.Where("shipments.sealine_code ILIKE ?", "%"+filter.Filter+"%")
+				}
+			case "sealineName":
+				if filter.Filter != "" {
+					query = query.Where("shipments.sealine_name ILIKE ?", "%"+filter.Filter+"%")
+				}
+			case "shippingStatus":
+				if len(filter.Values) > 0 {
+					query = query.Where("shipments.shipping_status IN ?", filter.Values)
+				}
+			}
+		}
+	}
+
+	var totalCount int64
+	if err := query.Count(&totalCount).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count shipments: %w", err)
+	}
+
+	if len(req.SortModel) > 0 {
+		for _, sort := range req.SortModel {
+			orderClause := fmt.Sprintf("shipments.%s %s", sort.ColId, sort.Sort)
+			query = query.Order(orderClause)
+		}
+	} else {
+		query = query.Order("shipments.created_at DESC")
+	}
+
+	query = query.Offset(req.StartRow).Limit(req.EndRow - req.StartRow)
+
+	var shipments []models.Shipment
+	if err := query.Find(&shipments).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to fetch shipments: %w", err)
+	}
+
+	return shipments, int(totalCount), nil
+}
+
+func (r *shipmentRepository) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {
+	db := r.getDBFromContext(ctx)
+
+	result := db.WithContext(ctx).
+		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
+		Delete(&models.UserShipment{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete user shipment: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("shipment not found")
+	}
+
+	return nil
+}
+
+func (r *shipmentRepository) BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error {
+	if len(shipmentIDs) == 0 {
+		return fmt.Errorf("no shipment IDs provided")
+	}
+
+	db := r.getDBFromContext(ctx)
+
+	result := db.WithContext(ctx).
+		Where("user_id = ? AND shipment_id IN ?", userID, shipmentIDs).
+		Delete(&models.UserShipment{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to bulk delete user shipments: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no shipments found to delete")
+	}
+
+	return nil
 }
