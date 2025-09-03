@@ -16,41 +16,14 @@ templ ShipmentPage() {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>Shipment Management</title>
+			<link rel="stylesheet" href="/assets/shipment/css/styles.css"/>
 			<script src="https://cdn.tailwindcss.com"></script>
 			<script src="/assets/js/htmx.min.js" defer></script>
 			<script src="/assets/js/htmx-ext-response-targets.js" defer></script>
 			<script src="/assets/js/ag-grid-enterprise.min.js"></script>
 			// <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-			<script>
-				tailwind.config = {
-					darkMode: 'class', // important! must be 'class' for toggle to work
-					theme: {
-					  extend: {
-							colors: {
-     							primary: '#3B82F6',
-     							secondary: '#6B7280'
-   							}
-     					}
-					}
-				}
-			</script>
-			<style>
-				.ag-theme-alpine {
-					--ag-background-color: rgb(255, 255, 255);
-					--ag-header-background-color: rgb(249, 250, 251);
-					--ag-odd-row-background-color: rgb(249, 250, 251);
-					--ag-border-color: rgb(229, 231, 235);
-				}
-				.dark .ag-theme-alpine {
-					--ag-background-color: rgb(17, 24, 39);
-					--ag-header-background-color: rgb(31, 41, 55);
-					--ag-odd-row-background-color: rgb(31, 41, 55);
-					--ag-border-color: rgb(55, 65, 81);
-					--ag-foreground-color: rgb(243, 244, 246);
-					--ag-secondary-foreground-color: rgb(156, 163, 175);
-				}
-			</style>
+			<script src="/assets/shipment/js/tailwind.config.js"></script>
 		</head>
 		<body class="min-h-screen bg-gray-50 dark:bg-gray-900">
 			<div class="container mx-auto px-4 py-8">
@@ -63,7 +36,7 @@ templ ShipmentPage() {
 				</div>
 			</div>
 			<!-- ag-Grid Setup Script -->
-			<script src="/assets/shipment/js/ag-grid.js"></script>
+			<script type="module" src="/assets/shipment/js/ag-grid.js"></script>
 		</body>
 	</html>
 }

@@ -8,6 +8,7 @@ import (
 	shipmentsDto "go-starter/internal/modules/shipments/dto"
 	"go-starter/internal/modules/shipments/models"
 	"go-starter/internal/modules/shipments/repositories"
+	"go-starter/internal/modules/shipments/types"
 	"log"
 
 	"github.com/google/uuid"
@@ -350,6 +351,31 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 	return shipment, nil
 }
 
+func (s *shipmentService) GetShipmentsForGrid(ctx context.Context, userID uuid.UUID) (*dto.GridDataResponse, error) {
+	shipments, err := s.repo.GetShipmentsForGrid(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch shipments for grid: %w", err)
+	}
+
+	gridShipments := make([]dto.GridShipment, len(shipments))
+	for i, shipment := range shipments {
+		gridShipments[i] = dto.GridShipment{
+			ID:             shipment.ID,
+			ShipmentNumber: shipment.ShipmentNumber,
+			ShipmentType:   shipment.ShipmentType,
+			SealineCode:    shipment.SealineCode,
+			SealineName:    shipment.SealineName,
+			ShippingStatus: shipment.ShippingStatus,
+			CreatedAt:      shipment.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt:      shipment.UpdatedAt.Format("2006-01-02 15:04:05"),
+		}
+	}
+
+	return &dto.GridDataResponse{
+		Rows: gridShipments,
+	}, nil
+}
+
 func (s *shipmentService) GetShipmentByNumber(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -411,21 +437,21 @@ func (s *shipmentService) validateShipmentForSync(ctx context.Context, userID, s
 	return shipment, nil
 }
 
-// SyncStats holds statistics about the sync operation
-type SyncStats struct {
-	LocationsCreated       int
-	RoutesCreated          int
-	VesselsCreated         int
-	FacilitiesCreated      int
-	ContainersCreated      int
-	ContainerEventsCreated int
-	RouteSegmentsCreated   int
-	CoordinatesCreated     int
-	AisRecordsCreated      int
-}
+// // SyncStats holds statistics about the sync operation
+// type SyncStats struct {
+// 	LocationsCreated       int
+// 	RoutesCreated          int
+// 	VesselsCreated         int
+// 	FacilitiesCreated      int
+// 	ContainersCreated      int
+// 	ContainerEventsCreated int
+// 	RouteSegmentsCreated   int
+// 	CoordinatesCreated     int
+// 	AisRecordsCreated      int
+// }
 
 // recreateShipmentRelatedData recreates all shipment related data from API response
-func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipment *models.Shipment, apiResponse *shipmentsDto.SafeCubeAPIShipmentResponse) (*SyncStats, error) {
+func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipment *models.Shipment, apiResponse *shipmentsDto.SafeCubeAPIShipmentResponse) (*types.SyncStats, error) {
 	// Validate API response
 	if apiResponse == nil {
 		return nil, fmt.Errorf("API response is nil")
@@ -434,7 +460,7 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 		return nil, fmt.Errorf("shipment is nil")
 	}
 
-	stats := &SyncStats{}
+	stats := &types.SyncStats{}
 	log.Printf("Creating %d locations for shipment %s", len(apiResponse.Locations), shipment.ShipmentNumber)
 	// Create locations
 	for _, loc := range apiResponse.Locations {

@@ -22,5 +22,5 @@ type FilterModel struct {
 }
 
 type BulkDeleteRequest struct {
-	ShipmentIDs []uuid.UUID `json:"shipment_ids"`
+	ShipmentIDs []uuid.UUID `json:"shipmentIDs"`
 }

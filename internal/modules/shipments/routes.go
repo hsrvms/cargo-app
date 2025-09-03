@@ -32,9 +32,10 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database) {
 	shipmentsAPI.Use(middlewares.JWTMiddleware(jwtService))
 
 	shipmentsAPI.POST("", shipmentAPIHandler.AddShipment)
+	shipmentsAPI.GET("/grid-data", shipmentAPIHandler.GetShipmentsForGrid)
 	shipmentsAPI.GET("/:id/details", shipmentAPIHandler.GetShipmentDetails)
-	shipmentsAPI.GET("/:id/refresh", shipmentAPIHandler.RefreshShipment)
 	shipmentsAPI.GET("/:id", shipmentAPIHandler.GetShipmentByID)
+	shipmentsAPI.POST("/:id/refresh", shipmentAPIHandler.RefreshShipment)
 	shipmentsAPI.DELETE("/:id", shipmentAPIHandler.DeleteUserShipment)
 	shipmentsAPI.DELETE("/bulk-delete", shipmentAPIHandler.BulkDeleteUserShipments)
 

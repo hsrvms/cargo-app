@@ -63,7 +63,7 @@ type ShipmentRepository interface {
 	DeleteAllShipmentRelatedData(ctx context.Context, shipmentID uuid.UUID) error
 	GetShipmentDataSummary(ctx context.Context, shipmentID uuid.UUID) (*ShipmentDataSummary, error)
 
-	GetShipmentsForGrid(ctx context.Context, userID uuid.UUID, req *dto.GridDataRequest) ([]models.Shipment, int, error)
+	GetShipmentsForGrid(ctx context.Context, userID uuid.UUID) ([]models.Shipment, error)
 	DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error
 	BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error
 }
@@ -1163,62 +1163,19 @@ func (r *shipmentRepository) GetShipmentDataSummary(ctx context.Context, shipmen
 	return summary, nil
 }
 
-func (r *shipmentRepository) GetShipmentsForGrid(ctx context.Context, userID uuid.UUID, req *dto.GridDataRequest) ([]models.Shipment, int, error) {
+func (r *shipmentRepository) GetShipmentsForGrid(ctx context.Context, userID uuid.UUID) ([]models.Shipment, error) {
 	db := r.db.DB.WithContext(ctx)
 
 	query := db.Model(&models.Shipment{}).
 		Joins("JOIN user_shipments us ON us.shipment_id = shipments.id").
 		Where("us.user_id = ?", userID)
 
-	if req.FilterModel != nil {
-		for field, filter := range req.FilterModel {
-			switch field {
-			case "shipmentNumber":
-				if filter.Filter != "" {
-					query = query.Where("shipments.shipment_number ILIKE ?", "%"+filter.Filter+"%")
-				}
-			case "shipmentType":
-				if len(filter.Values) > 0 {
-					query = query.Where("shipments.shipment_type IN ?", filter.Values)
-				}
-			case "sealineCode":
-				if filter.Filter != "" {
-					query = query.Where("shipments.sealine_code ILIKE ?", "%"+filter.Filter+"%")
-				}
-			case "sealineName":
-				if filter.Filter != "" {
-					query = query.Where("shipments.sealine_name ILIKE ?", "%"+filter.Filter+"%")
-				}
-			case "shippingStatus":
-				if len(filter.Values) > 0 {
-					query = query.Where("shipments.shipping_status IN ?", filter.Values)
-				}
-			}
-		}
-	}
-
-	var totalCount int64
-	if err := query.Count(&totalCount).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to count shipments: %w", err)
-	}
-
-	if len(req.SortModel) > 0 {
-		for _, sort := range req.SortModel {
-			orderClause := fmt.Sprintf("shipments.%s %s", sort.ColId, sort.Sort)
-			query = query.Order(orderClause)
-		}
-	} else {
-		query = query.Order("shipments.created_at DESC")
-	}
-
-	query = query.Offset(req.StartRow).Limit(req.EndRow - req.StartRow)
-
 	var shipments []models.Shipment
 	if err := query.Find(&shipments).Error; err != nil {
-		return nil, 0, fmt.Errorf("failed to fetch shipments: %w", err)
+		return nil, fmt.Errorf("failed to fetch shipments: %w", err)
 	}
 
-	return shipments, int(totalCount), nil
+	return shipments, nil
 }
 
 func (r *shipmentRepository) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {

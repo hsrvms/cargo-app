@@ -1,0 +1,14 @@
+.ag-theme-alpine {
+    --ag-background-color: rgb(255, 255, 255);
+    --ag-header-background-color: rgb(249, 250, 251);
+    --ag-odd-row-background-color: rgb(249, 250, 251);
+    --ag-border-color: rgb(229, 231, 235);
+}
+.dark .ag-theme-alpine {
+    --ag-background-color: rgb(17, 24, 39);
+    --ag-header-background-color: rgb(31, 41, 55);
+    --ag-odd-row-background-color: rgb(31, 41, 55);
+    --ag-border-color: rgb(55, 65, 81);
+    --ag-foreground-color: rgb(243, 244, 246);
+    --ag-secondary-foreground-color: rgb(156, 163, 175);
+}

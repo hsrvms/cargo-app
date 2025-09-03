@@ -100,6 +100,33 @@ func (h *shipmentAPIHandler) GetShipmentByNumber(c echo.Context) error {
 	})
 }
 
+func (h *shipmentAPIHandler) GetShipmentsForGrid(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	userID, err := authService.GetUserIDFromContext(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "unauthorized",
+		})
+	}
+
+	var req dto.GridDataRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	gridData, err := h.shipmentService.GetShipmentsForGrid(ctx, userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to fetch shipments",
+		})
+	}
+
+	return c.JSON(http.StatusOK, gridData)
+}
+
 func (h *shipmentAPIHandler) GetShipmentByID(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -152,9 +179,20 @@ func (h *shipmentAPIHandler) RefreshShipment(c echo.Context) error {
 		})
 	}
 
+	gridRow := dto.GridShipment{
+		ID:             shipment.ID,
+		ShipmentNumber: shipment.ShipmentNumber,
+		ShipmentType:   shipment.ShipmentType,
+		SealineCode:    shipment.SealineCode,
+		SealineName:    shipment.SealineName,
+		ShippingStatus: shipment.ShippingStatus,
+		CreatedAt:      shipment.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:      shipment.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}
+
 	return c.JSON(http.StatusOK, map[string]any{
 		"message":  "success",
-		"shipment": shipment,
+		"shipment": gridRow,
 	})
 
 }
