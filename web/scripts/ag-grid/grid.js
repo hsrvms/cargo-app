@@ -84,11 +84,9 @@ const gridOptions = {
   // rowModelType: "serverSide",
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+export function getGridApi() {
   const gridDiv = document.querySelector("#grid");
   gridApi = agGrid.createGrid(gridDiv, gridOptions);
-
-  loadShipments(gridApi);
 
   const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
   deleteSelectedBtn.addEventListener("click", () =>
@@ -97,9 +95,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const refreshGridBtn = document.getElementById("refreshGridBtn");
   refreshGridBtn.addEventListener("click", () => loadShipments(gridApi));
-});
+  return gridApi;
+}
 
-function loadShipments(gridApi) {
+export function loadShipments(gridApi) {
   fetch("/api/shipments/grid-data", {
     method: "GET",
     headers: {
@@ -108,6 +107,7 @@ function loadShipments(gridApi) {
   })
     .then((response) => response.json())
     .then((data) => {
+      console.log("Data:", data);
       gridApi.setGridOption("rowData", data.rows);
     })
     .catch((error) => {

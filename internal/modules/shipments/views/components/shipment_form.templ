@@ -5,13 +5,10 @@ templ AddShipmentForm() {
 		<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Add New Shipment</h2>
 	</div>
 	<form
-		hx-post="/api/shipments"
-		hx-target="#form-messages"
-		hx-on::after-request="if(event.detail.successful) { this.reset(); gridApi.refreshServerSide(); }"
+		id="addShipmentForm"
 		class="space-y-4"
-		x-data="{ loading: false }"
-		@htmx:before-request="loading = true"
-		@htmx:after-request="loading = false"
+		x-data="submitForm"
+		@submit.prevent="handleSubmit"
 	>
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 			<!-- Shipment Number -->

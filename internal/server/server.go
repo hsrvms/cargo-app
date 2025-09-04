@@ -30,6 +30,8 @@ func New(cfg *config.Config, database *db.Database) *Server {
 	e.Use(middleware.CORS())
 
 	e.Static("/assets", "web/assets")
+	e.Static("/scripts", "web/scripts")
+	e.Static("/config", "web/config")
 
 	server := &Server{
 		Echo:   e,

@@ -23,7 +23,3 @@ export function deleteSelectedBtnEvent(gridApi) {
       alert("Delete failed");
     });
 }
-
-// export function refreshGridBtnEvent(gridApi) {
-//   console.log("Refresh Button Worked");
-// }
