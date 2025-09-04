@@ -1,3 +1,5 @@
+@import "toast.css";
+
 .ag-theme-alpine {
     --ag-background-color: rgb(255, 255, 255);
     --ag-header-background-color: rgb(249, 250, 251);

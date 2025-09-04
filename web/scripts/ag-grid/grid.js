@@ -13,37 +13,32 @@ const columnDefs = [
   {
     field: "shipmentNumber",
     headerName: "Shipment Number",
-    sortable: true,
     filter: "agTextColumnFilter",
-    width: 200,
+    maxWidth: 200,
   },
   {
     field: "shipmentType",
     headerName: "Type",
-    sortable: true,
     filter: "agSetColumnFilter", // Enterprise
-    width: 90,
+    maxWidth: 90,
   },
   {
     field: "sealineCode",
     headerName: "Sealine",
-    sortable: true,
     filter: "agSetColumnFilter",
-    width: 100,
+    maxWidth: 120,
   },
   {
     field: "sealineName",
     headerName: "Sealine Name",
-    sortable: true,
     filter: "agTextColumnFilter",
-    width: 150,
   },
   {
     field: "shippingStatus",
     headerName: "Status",
-    sortable: true,
     filter: "agSetColumnFilter",
-    width: 120,
+    maxWidth: 120,
+    // cellStyle: { textAlign: "center" },
     cellRenderer: (params) => {
       const statusMap = {
         IN_TRANSIT: "In Transit",
@@ -64,30 +59,46 @@ const columnDefs = [
     },
   },
   {
+    field: "updatedAt",
+    headerName: "Last Updated",
+  },
+  {
     field: "actions",
     headerName: "Actions",
     width: 100,
     pinned: "right",
     sortable: false,
+    suppressMovable: true,
     cellRenderer: actionCellRenderer,
   },
 ];
 
 const gridOptions = {
   columnDefs,
+
   defaultColDef: {
     flex: 1,
+    suppressHeaderMenuButton: true,
+    // suppressHeaderFilterButton: true,
   },
   rowSelection,
   pagination: true,
   paginationPageSize: 20,
-  // rowModelType: "serverSide",
+  onGridReady: (event) => {
+    event.api.setFilterModel({
+      shippingStatus: { values: ["IN_TRANSIT", "UNKNOWN", "PLANNED"] },
+    });
+  },
 };
 
 export function getGridApi() {
   const gridDiv = document.querySelector("#grid");
   gridApi = agGrid.createGrid(gridDiv, gridOptions);
 
+  return gridApi;
+}
+
+export function handleToolbar(gridApi) {
   const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
   deleteSelectedBtn.addEventListener("click", () =>
     deleteSelectedBtnEvent(gridApi),
@@ -95,7 +106,6 @@ export function getGridApi() {
 
   const refreshGridBtn = document.getElementById("refreshGridBtn");
   refreshGridBtn.addEventListener("click", () => loadShipments(gridApi));
-  return gridApi;
 }
 
 export function loadShipments(gridApi) {

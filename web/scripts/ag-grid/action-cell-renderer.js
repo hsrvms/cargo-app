@@ -1,3 +1,5 @@
+import { showToast } from "../toast.js";
+
 export function actionCellRenderer(params) {
   const gridApi = params.api;
 
@@ -40,8 +42,13 @@ function refreshShipment(gridApi, id) {
     .then((response) => response.json)
     .then((data) => {
       gridApi.applyTransaction({ update: data.shipment });
+      console.log("Shipment Refreshed");
+      showToast("Shipment refreshed", "info");
     })
-    .catch((err) => console.log("Refresh error:", err));
+    .catch((err) => {
+      console.log("Refresh error:", err);
+      showToast("Error refreshing shipment", "error");
+    });
 }
 
 function deleteShipment(id) {

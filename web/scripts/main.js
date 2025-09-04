@@ -1,11 +1,16 @@
-import { handleShipmentForm } from "./add-shipment-form.js";
-import { getGridApi, loadShipments } from "./ag-grid/grid.js";
+import { handleNewShipment } from "./form/handle-new-shipment.js";
+import {
+  getGridApi,
+  handleToolbar,
+  loadShipments,
+} from "/scripts/ag-grid/grid.js";
 
 function main() {
-  document.addEventListener("DOMContentLoaded", () => {
-    const gridApi = getGridApi();
+  const gridApi = getGridApi();
+  document.addEventListener("DOMContentLoaded", async () => {
+    handleToolbar(gridApi);
     loadShipments(gridApi);
-    handleShipmentForm(gridApi);
+    window.handleNewShipment = (e) => handleNewShipment(e, gridApi);
   });
 }
 
