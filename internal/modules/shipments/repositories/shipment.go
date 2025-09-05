@@ -8,6 +8,7 @@ import (
 	"go-starter/internal/modules/shipments/models"
 	"go-starter/pkg/db"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -66,6 +67,7 @@ type ShipmentRepository interface {
 	GetShipmentsForGrid(ctx context.Context, userID uuid.UUID) ([]models.Shipment, error)
 	DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error
 	BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error
+	GetAllShipmentsForRefresh(ctx context.Context, skipRecentlyUpdated time.Duration) ([]ShipmentForRefresh, error)
 }
 
 type shipmentRepository struct {
@@ -850,8 +852,8 @@ func (r *shipmentRepository) convertFacilityToDTO(facility models.Facility) dto.
 		Locode:      facility.Locode,
 		BicCode:     facility.BicCode,
 		SmdgCode:    facility.SmdgCode,
-		Latitude:    facility.Latitude,
-		Longitude:   facility.Longitude,
+		Latitude:    *facility.Latitude,
+		Longitude:   *facility.Longitude,
 	}
 }
 
@@ -1216,4 +1218,31 @@ func (r *shipmentRepository) BulkDeleteUserShipments(ctx context.Context, userID
 	}
 
 	return nil
+}
+
+// ShipmentForRefresh represents a shipment for background processing
+type ShipmentForRefresh struct {
+	models.Shipment
+}
+
+// GetAllShipmentsForRefresh gets all shipments that need refreshing for background processing
+func (r *shipmentRepository) GetAllShipmentsForRefresh(ctx context.Context, skipRecentlyUpdated time.Duration) ([]ShipmentForRefresh, error) {
+	db := r.getDBFromContext(ctx)
+
+	var results []ShipmentForRefresh
+
+	query := db.Table("shipments").
+		Where("shipping_status != ?", "DELIVERED")
+
+	// Skip recently updated shipments if configured
+	if skipRecentlyUpdated > 0 {
+		cutoffTime := time.Now().Add(-skipRecentlyUpdated)
+		query = query.Where("updated_at < ?", cutoffTime)
+	}
+
+	if err := query.Find(&results).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch shipments for refresh: %w", err)
+	}
+
+	return results, nil
 }

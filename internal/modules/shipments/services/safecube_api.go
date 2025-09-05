@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	shipmentsDto "go-starter/internal/modules/shipments/dto"
+	"go-starter/pkg/ratelimiter"
 	"io"
 	"log"
 	"net/http"
@@ -13,18 +14,20 @@ import (
 )
 
 type safeCubeAPIService struct {
-	httpClient *http.Client
-	baseUrl    string
-	apiKey     string
+	httpClient  *http.Client
+	baseUrl     string
+	apiKey      string
+	rateLimiter *ratelimiter.SafeCubeAPIRateLimiter
 }
 
-func NewSafeCubeAPIService(baseUrl, apiKey string) SafeCubeAPIService {
+func NewSafeCubeAPIService(baseUrl, apiKey string, rateLimiter *ratelimiter.SafeCubeAPIRateLimiter) SafeCubeAPIService {
 	return &safeCubeAPIService{
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		baseUrl: baseUrl,
-		apiKey:  apiKey,
+		baseUrl:     baseUrl,
+		apiKey:      apiKey,
+		rateLimiter: rateLimiter,
 	}
 }
 
@@ -64,7 +67,14 @@ func (s *safeCubeAPIService) GetShipmentDetails(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	log.Printf("SafeCube API: Request headers set, making HTTP call...")
+	// Wait for rate limiter before making the request
+	log.Printf("SafeCube API: Waiting for rate limiter...")
+	if err := s.rateLimiter.Wait(ctx); err != nil {
+		log.Printf("SafeCube API: Rate limiter error: %v", err)
+		return nil, fmt.Errorf("rate limiter error: %w", err)
+	}
+
+	log.Printf("SafeCube API: Rate limiter cleared, making HTTP call...")
 	startTime := time.Now()
 	resp, err := s.httpClient.Do(req)
 	duration := time.Since(startTime)

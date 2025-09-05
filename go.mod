@@ -11,6 +11,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/rdbell/echo-pretty-logger v1.0.0
 	golang.org/x/crypto v0.41.0
+	golang.org/x/time v0.12.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.30.1
 )
@@ -35,5 +36,4 @@ require (
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
 )

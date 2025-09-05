@@ -8,8 +8,10 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
+	Server         ServerConfig
+	Database       DatabaseConfig
+	SafeCubeAPI    SafeCubeAPIConfig
+	BackgroundJobs BackgroundJobsConfig
 }
 
 type ServerConfig struct {
@@ -28,6 +30,18 @@ type DatabaseConfig struct {
 	SSLMode  string
 }
 
+type SafeCubeAPIConfig struct {
+	BaseURL string
+	APIKey  string
+}
+
+type BackgroundJobsConfig struct {
+	ShipmentRefreshInterval     time.Duration
+	ShipmentRefreshWorkers      int
+	ShipmentMaxPerRun           int
+	ShipmentSkipRecentlyUpdated time.Duration
+}
+
 func New() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -43,6 +57,16 @@ func New() *Config {
 			Password: getEnv("DB_PASSWORD", "postgres"),
 			DBName:   getEnv("DB_NAME", "go-starter"),
 			SSLMode:  getEnv("DB_SSL_MODE", "disable"),
+		},
+		SafeCubeAPI: SafeCubeAPIConfig{
+			BaseURL: getEnv("SAFECUBE_API_BASE_URL", ""),
+			APIKey:  getEnv("SAFECUBE_API_KEY", ""),
+		},
+		BackgroundJobs: BackgroundJobsConfig{
+			ShipmentRefreshInterval:     getEnvAsDuration("SHIPMENT_REFRESH_INTERVAL", 3*time.Hour),
+			ShipmentRefreshWorkers:      getEnvAsInt("SHIPMENT_REFRESH_WORKERS", 5),
+			ShipmentMaxPerRun:           getEnvAsInt("SHIPMENT_MAX_PER_RUN", 0),
+			ShipmentSkipRecentlyUpdated: getEnvAsDuration("SHIPMENT_SKIP_RECENTLY_UPDATED", 30*time.Minute),
 		},
 	}
 }
