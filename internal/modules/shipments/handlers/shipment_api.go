@@ -71,9 +71,20 @@ func (h *shipmentAPIHandler) AddShipment(c echo.Context) error {
 		})
 	}
 
+	gridRow := dto.GridShipment{
+		ID:             shipment.ID,
+		ShipmentNumber: shipment.ShipmentNumber,
+		ShipmentType:   shipment.ShipmentType,
+		SealineCode:    shipment.SealineCode,
+		SealineName:    shipment.SealineName,
+		ShippingStatus: shipment.ShippingStatus,
+		CreatedAt:      shipment.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:      shipment.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}
+
 	return c.JSON(http.StatusCreated, map[string]any{
 		"message":  "Shipment added successfully",
-		"shipment": shipment,
+		"shipment": gridRow,
 	})
 }
 

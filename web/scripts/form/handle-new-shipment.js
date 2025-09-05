@@ -10,7 +10,9 @@ export function handleNewShipment(event, gridApi) {
   }
 
   try {
-    const newShipment = JSON.parse(xhr.responseText);
+    const response = JSON.parse(xhr.responseText);
+
+    const newShipment = response.shipment || response;
 
     if (gridApi && newShipment) {
       gridApi.applyTransaction({ add: [newShipment] });

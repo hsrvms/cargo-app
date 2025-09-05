@@ -27,7 +27,9 @@ export function actionCellRenderer(params) {
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
 		</svg>
   `;
-  deleteBtn.addEventListener("click", () => deleteShipment(params.data.id));
+  deleteBtn.addEventListener("click", () =>
+    deleteShipment(gridApi, params.data.id),
+  );
 
   container.appendChild(refreshBtn);
   container.appendChild(deleteBtn);
@@ -36,21 +38,31 @@ export function actionCellRenderer(params) {
 }
 
 function refreshShipment(gridApi, id) {
-  console.log("Refreshing shipment:", id);
-
   fetch(`/api/shipments/${id}/refresh`, { method: "POST" })
-    .then((response) => response.json)
+    .then((response) => response.json())
     .then((data) => {
-      gridApi.applyTransaction({ update: data.shipment });
-      console.log("Shipment Refreshed");
+      gridApi.applyTransaction({ update: [data.shipment] });
       showToast("Shipment refreshed", "info");
+      console.log("Shipment Refreshed");
     })
     .catch((err) => {
-      console.log("Refresh error:", err);
       showToast("Error refreshing shipment", "error");
+      console.error("Refresh error:", err);
     });
 }
 
-function deleteShipment(id) {
-  console.log("Shipment to delete:", id);
+function deleteShipment(gridApi, id) {
+  fetch(`/api/shipments/${id}`, { method: "DELETE" })
+    .then((response) => {
+      if (!response.ok) throw new Error("Failed to delete");
+      return response.json();
+    })
+    .then(() => {
+      gridApi.applyTransaction({ remove: [{ id }] });
+      showToast("Shipment deleted");
+    })
+    .catch((err) => {
+      showToast("Error deleting shipment", "error");
+      console.error("Delete error:", err);
+    });
 }

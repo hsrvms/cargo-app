@@ -89,6 +89,7 @@ const gridOptions = {
       shippingStatus: { values: ["IN_TRANSIT", "UNKNOWN", "PLANNED"] },
     });
   },
+  getRowId: (params) => String(params.data.id),
 };
 
 export function getGridApi() {
@@ -117,7 +118,6 @@ export function loadShipments(gridApi) {
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log("Data:", data);
       gridApi.setGridOption("rowData", data.rows);
     })
     .catch((error) => {
