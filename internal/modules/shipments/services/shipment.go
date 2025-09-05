@@ -207,14 +207,49 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		for _, ce := range c.Events {
 			location, err := s.repo.FindLocationByLocode(ctx, ce.Location.Locode)
 			if err != nil {
-				return nil, err
+				if err.Error() == "location not found" {
+					// Create location if it doesn't exist
+					newLocation := models.Location{
+						Name:        ce.Location.Name,
+						State:       ce.Location.State,
+						Country:     ce.Location.Country,
+						CountryCode: ce.Location.CountryCode,
+						Locode:      ce.Location.Locode,
+						Latitude:    ce.Location.Coordinates.Lat,
+						Longitude:   ce.Location.Coordinates.Lng,
+						Timezone:    ce.Location.Timezone,
+					}
+					location, err = s.repo.CreateLocation(ctx, &shipment.ID, &newLocation)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create location for container event: %w", err)
+					}
+				} else {
+					return nil, err
+				}
 			}
 
 			var facility *models.Facility
 			if ce.Facility != nil {
 				facility, err = s.repo.FindFacilityByLocode(ctx, ce.Facility.Locode)
 				if err != nil {
-					return nil, err
+					if err.Error() == "location not found" {
+						// Create facility if it doesn't exist
+						newFacility := models.Facility{
+							Name:        ce.Facility.Name,
+							CountryCode: ce.Facility.CountryCode,
+							Locode:      ce.Facility.Locode,
+							BicCode:     ce.Facility.BicCode,
+							SmdgCode:    ce.Facility.SmdgCode,
+							Latitude:    &ce.Facility.Coordinates.Lat,
+							Longitude:   &ce.Facility.Coordinates.Lng,
+						}
+						facility, err = s.repo.CreateFacility(ctx, &shipment.ID, &newFacility)
+						if err != nil {
+							return nil, fmt.Errorf("failed to create facility for container event: %w", err)
+						}
+					} else {
+						return nil, err
+					}
 				}
 			}
 
@@ -303,37 +338,42 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		aisData := apiResponse.RouteData.Ais.Data
 		aisVessel, err := s.repo.FindVesselByIMOAndMMSI(ctx, aisData.Vessel.Imo, aisData.Vessel.Mmsi)
 		if err != nil {
-			return nil, err
-		}
-		ais := &models.Ais{
-			ShipmentID:               shipment.ID,
-			Status:                   apiResponse.RouteData.Ais.Status,
-			LastEventDescription:     aisData.LastEvent.Description,
-			LastEventDate:            aisData.LastEvent.Date,
-			LastEventVoyage:          aisData.LastEvent.Voyage,
-			DischargePortName:        aisData.DischargePort.Name,
-			DischargePortCountryCode: aisData.DischargePort.CountryCode,
-			DischargePortCode:        aisData.DischargePort.Code,
-			DischargePortDate:        aisData.DischargePort.Date,
-			DischargePortDateLabel:   aisData.DischargePort.DateLabel,
-			DeparturePortName:        aisData.DeparturePort.Name,
-			DeparturePortCountryCode: aisData.DeparturePort.CountryCode,
-			DeparturePortCode:        aisData.DeparturePort.Code,
-			DeparturePortDate:        aisData.DeparturePort.Date,
-			DeparturePortDateLabel:   aisData.DeparturePort.DateLabel,
-			ArrivalPortName:          aisData.ArrivalPort.Name,
-			ArrivalPortCountryCode:   aisData.ArrivalPort.CountryCode,
-			ArrivalPortCode:          aisData.ArrivalPort.Code,
-			ArrivalPortDate:          aisData.ArrivalPort.Date,
-			ArrivalPortDateLabel:     aisData.ArrivalPort.DateLabel,
-			VesselID:                 &aisVessel.ID,
-			LastVesselPositionLat:    aisData.LastVesselPosition.Lat,
-			LastVesselPositionLng:    aisData.LastVesselPosition.Lng,
-			LastVesselPositionUpdate: aisData.LastVesselPosition.UpdatedAt,
-		}
-		_, err = s.repo.CreateAis(ctx, ais)
-		if err != nil {
-			return nil, err
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("failed to find AIS vessel: %w", err)
+			}
+			// If vessel not found, skip AIS data creation
+			log.Printf("AIS vessel not found (IMO: %d, MMSI: %d), skipping AIS data creation", aisData.Vessel.Imo, aisData.Vessel.Mmsi)
+		} else {
+			ais := &models.Ais{
+				ShipmentID:               shipment.ID,
+				Status:                   apiResponse.RouteData.Ais.Status,
+				LastEventDescription:     aisData.LastEvent.Description,
+				LastEventDate:            aisData.LastEvent.Date,
+				LastEventVoyage:          aisData.LastEvent.Voyage,
+				DischargePortName:        aisData.DischargePort.Name,
+				DischargePortCountryCode: aisData.DischargePort.CountryCode,
+				DischargePortCode:        aisData.DischargePort.Code,
+				DischargePortDate:        aisData.DischargePort.Date,
+				DischargePortDateLabel:   aisData.DischargePort.DateLabel,
+				DeparturePortName:        aisData.DeparturePort.Name,
+				DeparturePortCountryCode: aisData.DeparturePort.CountryCode,
+				DeparturePortCode:        aisData.DeparturePort.Code,
+				DeparturePortDate:        aisData.DeparturePort.Date,
+				DeparturePortDateLabel:   aisData.DeparturePort.DateLabel,
+				ArrivalPortName:          aisData.ArrivalPort.Name,
+				ArrivalPortCountryCode:   aisData.ArrivalPort.CountryCode,
+				ArrivalPortCode:          aisData.ArrivalPort.Code,
+				ArrivalPortDate:          aisData.ArrivalPort.Date,
+				ArrivalPortDateLabel:     aisData.ArrivalPort.DateLabel,
+				VesselID:                 &aisVessel.ID,
+				LastVesselPositionLat:    aisData.LastVesselPosition.Lat,
+				LastVesselPositionLng:    aisData.LastVesselPosition.Lng,
+				LastVesselPositionUpdate: aisData.LastVesselPosition.UpdatedAt,
+			}
+			_, err = s.repo.CreateAis(ctx, ais)
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		ais := &models.Ais{
@@ -436,19 +476,6 @@ func (s *shipmentService) validateShipmentForSync(ctx context.Context, userID, s
 
 	return shipment, nil
 }
-
-// // SyncStats holds statistics about the sync operation
-// type SyncStats struct {
-// 	LocationsCreated       int
-// 	RoutesCreated          int
-// 	VesselsCreated         int
-// 	FacilitiesCreated      int
-// 	ContainersCreated      int
-// 	ContainerEventsCreated int
-// 	RouteSegmentsCreated   int
-// 	CoordinatesCreated     int
-// 	AisRecordsCreated      int
-// }
 
 // recreateShipmentRelatedData recreates all shipment related data from API response
 func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipment *models.Shipment, apiResponse *shipmentsDto.SafeCubeAPIShipmentResponse) (*types.SyncStats, error) {
@@ -581,14 +608,49 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 		for _, ce := range c.Events {
 			location, err := s.repo.FindLocationByLocode(ctx, ce.Location.Locode)
 			if err != nil {
-				return nil, fmt.Errorf("failed to find location for container event: %w", err)
+				if err.Error() == "location not found" {
+					// Create location if it doesn't exist
+					newLocation := models.Location{
+						Name:        ce.Location.Name,
+						State:       ce.Location.State,
+						Country:     ce.Location.Country,
+						CountryCode: ce.Location.CountryCode,
+						Locode:      ce.Location.Locode,
+						Latitude:    ce.Location.Coordinates.Lat,
+						Longitude:   ce.Location.Coordinates.Lng,
+						Timezone:    ce.Location.Timezone,
+					}
+					location, err = s.repo.CreateLocation(ctx, &shipment.ID, &newLocation)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create location for container event: %w", err)
+					}
+				} else {
+					return nil, fmt.Errorf("failed to find location for container event: %w", err)
+				}
 			}
 
 			var facility *models.Facility
 			if ce.Facility != nil {
 				facility, err = s.repo.FindFacilityByLocode(ctx, ce.Facility.Locode)
 				if err != nil {
-					return nil, fmt.Errorf("failed to find facility for container event: %w", err)
+					if err.Error() == "location not found" {
+						// Create facility if it doesn't exist
+						newFacility := models.Facility{
+							Name:        ce.Facility.Name,
+							CountryCode: ce.Facility.CountryCode,
+							Locode:      ce.Facility.Locode,
+							BicCode:     ce.Facility.BicCode,
+							SmdgCode:    ce.Facility.SmdgCode,
+							Latitude:    &ce.Facility.Coordinates.Lat,
+							Longitude:   &ce.Facility.Coordinates.Lng,
+						}
+						facility, err = s.repo.CreateFacility(ctx, &shipment.ID, &newFacility)
+						if err != nil {
+							return nil, fmt.Errorf("failed to create facility for container event: %w", err)
+						}
+					} else {
+						return nil, fmt.Errorf("failed to find facility for container event: %w", err)
+					}
 				}
 			}
 
@@ -682,40 +744,45 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 		aisData := apiResponse.RouteData.Ais.Data
 		aisVessel, err := s.repo.FindVesselByIMOAndMMSI(ctx, aisData.Vessel.Imo, aisData.Vessel.Mmsi)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find AIS vessel: %w", err)
-		}
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("failed to find AIS vessel: %w", err)
+			}
+			// If vessel not found, skip AIS data creation
+			log.Printf("AIS vessel not found (IMO: %d, MMSI: %d), skipping AIS data creation", aisData.Vessel.Imo, aisData.Vessel.Mmsi)
+		} else {
 
-		ais := &models.Ais{
-			ShipmentID:               shipment.ID,
-			Status:                   apiResponse.RouteData.Ais.Status,
-			LastEventDescription:     aisData.LastEvent.Description,
-			LastEventDate:            aisData.LastEvent.Date,
-			LastEventVoyage:          aisData.LastEvent.Voyage,
-			DischargePortName:        aisData.DischargePort.Name,
-			DischargePortCountryCode: aisData.DischargePort.CountryCode,
-			DischargePortCode:        aisData.DischargePort.Code,
-			DischargePortDate:        aisData.DischargePort.Date,
-			DischargePortDateLabel:   aisData.DischargePort.DateLabel,
-			DeparturePortName:        aisData.DeparturePort.Name,
-			DeparturePortCountryCode: aisData.DeparturePort.CountryCode,
-			DeparturePortCode:        aisData.DeparturePort.Code,
-			DeparturePortDate:        aisData.DeparturePort.Date,
-			DeparturePortDateLabel:   aisData.DeparturePort.DateLabel,
-			ArrivalPortName:          aisData.ArrivalPort.Name,
-			ArrivalPortCountryCode:   aisData.ArrivalPort.CountryCode,
-			ArrivalPortCode:          aisData.ArrivalPort.Code,
-			ArrivalPortDate:          aisData.ArrivalPort.Date,
-			ArrivalPortDateLabel:     aisData.ArrivalPort.DateLabel,
-			VesselID:                 &aisVessel.ID,
-			LastVesselPositionLat:    aisData.LastVesselPosition.Lat,
-			LastVesselPositionLng:    aisData.LastVesselPosition.Lng,
-			LastVesselPositionUpdate: aisData.LastVesselPosition.UpdatedAt,
+			ais := &models.Ais{
+				ShipmentID:               shipment.ID,
+				Status:                   apiResponse.RouteData.Ais.Status,
+				LastEventDescription:     aisData.LastEvent.Description,
+				LastEventDate:            aisData.LastEvent.Date,
+				LastEventVoyage:          aisData.LastEvent.Voyage,
+				DischargePortName:        aisData.DischargePort.Name,
+				DischargePortCountryCode: aisData.DischargePort.CountryCode,
+				DischargePortCode:        aisData.DischargePort.Code,
+				DischargePortDate:        aisData.DischargePort.Date,
+				DischargePortDateLabel:   aisData.DischargePort.DateLabel,
+				DeparturePortName:        aisData.DeparturePort.Name,
+				DeparturePortCountryCode: aisData.DeparturePort.CountryCode,
+				DeparturePortCode:        aisData.DeparturePort.Code,
+				DeparturePortDate:        aisData.DeparturePort.Date,
+				DeparturePortDateLabel:   aisData.DeparturePort.DateLabel,
+				ArrivalPortName:          aisData.ArrivalPort.Name,
+				ArrivalPortCountryCode:   aisData.ArrivalPort.CountryCode,
+				ArrivalPortCode:          aisData.ArrivalPort.Code,
+				ArrivalPortDate:          aisData.ArrivalPort.Date,
+				ArrivalPortDateLabel:     aisData.ArrivalPort.DateLabel,
+				VesselID:                 &aisVessel.ID,
+				LastVesselPositionLat:    aisData.LastVesselPosition.Lat,
+				LastVesselPositionLng:    aisData.LastVesselPosition.Lng,
+				LastVesselPositionUpdate: aisData.LastVesselPosition.UpdatedAt,
+			}
+			_, err = s.repo.CreateAis(ctx, ais)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create AIS data: %w", err)
+			}
+			stats.AisRecordsCreated++
 		}
-		_, err = s.repo.CreateAis(ctx, ais)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create AIS data: %w", err)
-		}
-		stats.AisRecordsCreated++
 	} else {
 		ais := &models.Ais{
 			ShipmentID: shipment.ID,
@@ -723,8 +790,9 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 		}
 		_, err := s.repo.CreateAis(ctx, ais)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create AIS data: %w", err)
 		}
+		stats.AisRecordsCreated++
 	}
 	log.Printf("Sync statistics for shipment %s: %+v", shipment.ShipmentNumber, stats)
 	return stats, nil
