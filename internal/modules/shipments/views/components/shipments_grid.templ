@@ -27,5 +27,20 @@ templ ShipmentsGrid() {
 		</div>
 		<!-- ag-Grid Container -->
 		<div id="grid" class="ag-theme-alpine w-full" style="height: 400px;"></div>
+		<!-- Drawer (hidden by default) -->
+		<div
+			id="shipment-drawer"
+			class="fixed top-0 right-0 h-full w-[50vw] bg-white dark:bg-gray-800 shadow-lg transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto"
+		>
+			<div class="p-4 flex justify-between items-center border-b dark:border-gray-700">
+				<h2 class="text-lg font-semibold text-gray-900 dark:text-white">Shipment Details</h2>
+				<button onclick="closeDrawer()" class="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
+					✕
+				</button>
+			</div>
+			<div id="drawer-content" class="p-4">
+				<!-- HTMX will load shipment details here -->
+			</div>
+		</div>
 	</div>
 }

@@ -28,7 +28,7 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	shipmentService := shipmentServices.NewShipmentService(shipmentRepository, safeCubeAPIService)
 	shipmentAPIHandler := handlers.NewShipmentAPIHandler(shipmentService, safeCubeAPIService)
 
-	shipmentWEBHandler := handlers.NewShipmentWEBHandler()
+	shipmentWEBHandler := handlers.NewShipmentWEBHandler(shipmentService)
 
 	shipmentsAPI := api.Group("/shipments")
 	shipmentsAPI.Use(middlewares.JWTMiddleware(jwtService))
@@ -36,6 +36,7 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	shipmentsAPI.POST("", shipmentAPIHandler.AddShipment)
 	shipmentsAPI.GET("/grid-data", shipmentAPIHandler.GetShipmentsForGrid)
 	shipmentsAPI.GET("/:id/details", shipmentAPIHandler.GetShipmentDetails)
+	shipmentsAPI.GET("/:id/details-html", shipmentWEBHandler.GetShipmentDetailsHTML)
 	shipmentsAPI.GET("/:id", shipmentAPIHandler.GetShipmentByID)
 	shipmentsAPI.POST("/:id/refresh", shipmentAPIHandler.RefreshShipment)
 	shipmentsAPI.DELETE("/:id", shipmentAPIHandler.DeleteUserShipment)

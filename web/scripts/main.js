@@ -1,3 +1,4 @@
+import { initDrawerFunctions } from "./ag-grid/drawer-functions.js";
 import { handleNewShipment } from "./form/handle-new-shipment.js";
 import {
   getGridApi,
@@ -8,6 +9,7 @@ import {
 function main() {
   const gridApi = getGridApi();
   document.addEventListener("DOMContentLoaded", async () => {
+    initDrawerFunctions();
     handleToolbar(gridApi);
     loadShipments(gridApi);
     window.handleNewShipment = (e) => handleNewShipment(e, gridApi);

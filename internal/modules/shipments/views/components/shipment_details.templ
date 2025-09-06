@@ -1,0 +1,71 @@
+package components
+
+import "go-starter/internal/modules/shipments/dto"
+
+templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
+	<div class="text-white">
+		<p><strong>Number:</strong> { d.ShipmentNumber }</p>
+		<p><strong>Status:</strong> { d.ShippingStatus }</p>
+		<p><strong>Sealine:</strong> { d.SealineName }</p>
+		<p><strong>Updated:</strong> { d.UpdatedAt.Format("2006-01-02 15:04") }</p>
+		<div class="mt-4">
+			<h3 class="font-semibold text-white">Route</h3>
+			<ul class="list-disc pl-4">
+				if d.Route.Prepol != nil {
+					<li>Prepol → { d.Route.Prepol.Location.Name } ({ d.Route.Prepol.Date.Format("2006-01-02") })</li>
+				}
+				if d.Route.Pol != nil {
+					<li>POL → { d.Route.Pol.Location.Name } ({ d.Route.Pol.Date.Format("2006-01-02") })</li>
+				}
+				if d.Route.Pod != nil {
+					<li>POD → { d.Route.Pod.Location.Name } ({ d.Route.Pod.Date.Format("2006-01-02") })</li>
+				}
+				if d.Route.Postpod != nil {
+					<li>PostPOD → { d.Route.Postpod.Location.Name } ({ d.Route.Postpod.Date.Format("2006-01-02") })</li>
+				}
+				if d.Route.Prepol == nil && d.Route.Pol == nil && d.Route.Pod == nil && d.Route.Postpod == nil {
+					<li class="text-gray-500">No route info available</li>
+				}
+			</ul>
+		</div>
+		<div class="mt-6">
+			<h3 class="font-semibold">Containers</h3>
+			if len(d.Containers) == 0 {
+				<p class="text-gray-500">No containers available</p>
+			}
+			for _, c := range d.Containers {
+				<div class="mt-4 p-4 border rounded bg-gray-50 dark:bg-gray-700">
+					<p><strong>Container:</strong> { c.Number } ({ c.IsoCode }) - { c.Status }</p>
+					<div class="mt-3">
+						<h4 class="font-medium text-sm">Events</h4>
+						if len(c.Events) == 0 {
+							<p class="text-gray-400">No events available</p>
+						}
+						if len(c.Events) > 0 {
+							<ul class="relative border-l border-gray-300 dark:border-gray-600 pl-4 mt-2">
+								for _, e := range c.Events {
+									<li class="mb-4 ml-2">
+										<div class="absolute w-2 h-2 bg-blue-500 rounded-full -left-1.5 mt-1.5"></div>
+										<p class="text-sm">
+											<strong>{ e.Description }</strong>
+											— { e.Location.Name }, { e.Location.CountryCode }
+										</p>
+										<p class="text-xs text-gray-600 dark:text-gray-400">
+											{ e.Date.Format("2006-01-02 15:04") }
+											if e.IsActual {
+												(<span>Actual</span>)
+											}
+											if !e.IsActual {
+												(<span>ETA</span>)
+											}
+										</p>
+									</li>
+								}
+							</ul>
+						}
+					</div>
+				</div>
+			}
+		</div>
+	</div>
+}
