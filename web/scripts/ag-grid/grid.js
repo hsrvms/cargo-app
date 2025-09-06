@@ -21,7 +21,7 @@ const columnDefs = [
       return `
         <button
           class="text-blue-600 dark:text-blue-300 hover:underline font-medium"
-          onclick="openDrawerFetchDetails('${params.data.id}')"
+          onclick="openModalFetchDetails('${params.data.id}')"
         >
           ${params.value}
         </button>

@@ -53,11 +53,11 @@ export function actionCellRenderer(params) {
     </svg>
     `;
   detailsBtn.addEventListener("click", () => {
-    openDrawer();
+    openModal();
     htmx.ajax(
       "GET",
       `/api/shipments/${params.data.id}/details-html`,
-      "#drawer-content",
+      "#modal-body",
     );
     // window.location.href = `/shipments/${params.data.id}`;
   });
