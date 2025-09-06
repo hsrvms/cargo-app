@@ -15,6 +15,18 @@ const columnDefs = [
     headerName: "Shipment Number",
     filter: "agTextColumnFilter",
     maxWidth: 200,
+    cellRenderer: (params) => {
+      if (!params.value) return "";
+
+      return `
+        <button
+          class="text-blue-600 dark:text-blue-300 hover:underline font-medium"
+          onclick="openDrawerFetchDetails('${params.data.id}')"
+        >
+          ${params.value}
+        </button>
+      `;
+    },
   },
   {
     field: "shipmentType",

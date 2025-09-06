@@ -1,6 +1,7 @@
 export function initDrawerFunctions() {
   window.openDrawer = openDrawer;
   window.closeDrawer = closeDrawer;
+  window.openDrawerFetchDetails = openDrawerFetchDetails;
 }
 
 function openDrawer() {
@@ -11,4 +12,13 @@ function openDrawer() {
 
 function closeDrawer() {
   document.getElementById("shipment-drawer").classList.add("translate-x-full");
+}
+
+function openDrawerFetchDetails(shipmentID) {
+  openDrawer();
+  htmx.ajax(
+    "GET",
+    `/api/shipments/${shipmentID}/details-html`,
+    "#drawer-content",
+  );
 }
