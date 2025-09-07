@@ -71,20 +71,26 @@ func (h *shipmentAPIHandler) AddShipment(c echo.Context) error {
 		})
 	}
 
-	gridRow := dto.GridShipment{
-		ID:             shipment.ID,
-		ShipmentNumber: shipment.ShipmentNumber,
-		ShipmentType:   shipment.ShipmentType,
-		SealineCode:    shipment.SealineCode,
-		SealineName:    shipment.SealineName,
-		ShippingStatus: shipment.ShippingStatus,
-		CreatedAt:      shipment.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:      shipment.UpdatedAt.Format("2006-01-02 15:04:05"),
+	// Get full shipment details to return
+	shipmentDetails, err := h.shipmentService.GetShipmentDetails(c.Request().Context(), userID, shipment.ID)
+	if err != nil {
+		// If we can't get details, return basic info
+		return c.JSON(http.StatusCreated, map[string]any{
+			"message": "Shipment added successfully",
+			"shipment": map[string]any{
+				"id":             shipment.ID,
+				"shipmentNumber": shipment.ShipmentNumber,
+				"shipmentType":   shipment.ShipmentType,
+				"sealineCode":    shipment.SealineCode,
+				"sealineName":    shipment.SealineName,
+				"shippingStatus": shipment.ShippingStatus,
+			},
+		})
 	}
 
 	return c.JSON(http.StatusCreated, map[string]any{
 		"message":  "Shipment added successfully",
-		"shipment": gridRow,
+		"shipment": shipmentDetails,
 	})
 }
 
@@ -190,20 +196,26 @@ func (h *shipmentAPIHandler) RefreshShipment(c echo.Context) error {
 		})
 	}
 
-	gridRow := dto.GridShipment{
-		ID:             shipment.ID,
-		ShipmentNumber: shipment.ShipmentNumber,
-		ShipmentType:   shipment.ShipmentType,
-		SealineCode:    shipment.SealineCode,
-		SealineName:    shipment.SealineName,
-		ShippingStatus: shipment.ShippingStatus,
-		CreatedAt:      shipment.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:      shipment.UpdatedAt.Format("2006-01-02 15:04:05"),
+	// Get full shipment details to return
+	shipmentDetails, err := h.shipmentService.GetShipmentDetails(c.Request().Context(), userID, shipment.ID)
+	if err != nil {
+		// If we can't get details, return basic info
+		return c.JSON(http.StatusOK, map[string]any{
+			"message": "success",
+			"shipment": map[string]any{
+				"id":             shipment.ID,
+				"shipmentNumber": shipment.ShipmentNumber,
+				"shipmentType":   shipment.ShipmentType,
+				"sealineCode":    shipment.SealineCode,
+				"sealineName":    shipment.SealineName,
+				"shippingStatus": shipment.ShippingStatus,
+			},
+		})
 	}
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"message":  "success",
-		"shipment": gridRow,
+		"shipment": shipmentDetails,
 	})
 
 }

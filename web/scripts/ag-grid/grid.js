@@ -76,6 +76,82 @@ const columnDefs = [
     headerName: "Last Updated",
   },
   {
+    field: "originPort",
+    headerName: "Origin",
+    maxWidth: 150,
+    cellRenderer: (params) => {
+      const pol = params.data?.route?.pol;
+      if (pol && pol.location) {
+        return `${pol.location.name} (${pol.location.locode})`;
+      }
+      return "N/A";
+    },
+  },
+  {
+    field: "destinationPort",
+    headerName: "Destination",
+    maxWidth: 150,
+    cellRenderer: (params) => {
+      const pod = params.data?.route?.pod;
+      if (pod && pod.location) {
+        return `${pod.location.name} (${pod.location.locode})`;
+      }
+      return "N/A";
+    },
+  },
+  {
+    field: "vesselInfo",
+    headerName: "Vessel",
+    maxWidth: 180,
+    cellRenderer: (params) => {
+      const vessels = params.data?.vessels;
+      if (vessels && vessels.length > 0) {
+        const vessel = vessels[0];
+        return `${vessel.name || "Unknown"} (${vessel.imo || "N/A"})`;
+      }
+      return "N/A";
+    },
+  },
+  {
+    field: "containerCount",
+    headerName: "Containers",
+    maxWidth: 100,
+    cellRenderer: (params) => {
+      const containers = params.data?.containers;
+      if (containers && containers.length > 0) {
+        return containers.length.toString();
+      }
+      return "0";
+    },
+  },
+  {
+    field: "nextETA",
+    headerName: "Next ETA",
+    maxWidth: 120,
+    cellRenderer: (params) => {
+      const route = params.data?.route;
+      if (!route) return "N/A";
+
+      // Find next port with a future date
+      const ports = [route.prepol, route.pol, route.pod, route.postpod].filter(
+        Boolean,
+      );
+      const now = new Date();
+
+      for (const port of ports) {
+        if (port.date && new Date(port.date) > now) {
+          const date = new Date(port.date);
+          return date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+        }
+      }
+
+      return "N/A";
+    },
+  },
+  {
     field: "actions",
     headerName: "Actions",
     width: 100,
@@ -90,13 +166,27 @@ const gridOptions = {
   columnDefs,
 
   defaultColDef: {
-    flex: 1,
     suppressHeaderMenuButton: true,
+    resizable: true,
+    sortable: true,
+    filter: true,
     // suppressHeaderFilterButton: true,
   },
   rowSelection,
   pagination: true,
-  paginationPageSize: 20,
+  paginationPageSize: 15, // Reduced due to richer data per row
+  paginationPageSizeSelector: [15, 25, 50],
+
+  // Performance optimizations for richer data
+  rowBuffer: 10,
+  suppressRowClickSelection: false,
+  suppressCellFocus: true,
+  animateRows: true,
+
+  // Handle large datasets better
+  suppressColumnVirtualisation: false,
+  suppressRowVirtualisation: false,
+
   onGridReady: (event) => {
     event.api.setFilterModel({
       shippingStatus: { values: ["IN_TRANSIT", "UNKNOWN", "PLANNED"] },
@@ -134,6 +224,17 @@ export function loadShipments(gridApi) {
   })
     .then((response) => response.json())
     .then((data) => {
+      console.group("Grid Data Debug:");
+      console.log("Full API response:", data);
+      console.log("Number of rows:", data.rows?.length || 0);
+      if (data.rows && data.rows.length > 0) {
+        console.log("First row sample:", data.rows[0]);
+        console.log("First row route data:", data.rows[0]?.route);
+        console.log("First row containers:", data.rows[0]?.containers);
+        console.log("First row vessels:", data.rows[0]?.vessels);
+      }
+      console.groupEnd();
+
       gridApi.setGridOption("rowData", data.rows);
       // Update map after data is loaded
       setTimeout(() => {
