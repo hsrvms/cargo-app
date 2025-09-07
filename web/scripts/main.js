@@ -1,5 +1,6 @@
 import { initModalFunctions } from "./ag-grid/modal-functions.js";
 import { handleNewShipment } from "./form/handle-new-shipment.js";
+import { handleMap } from "./map/handle-map.js";
 import {
   getGridApi,
   handleToolbar,

@@ -1,5 +1,6 @@
 import { actionCellRenderer } from "./action-cell-renderer.js";
 import { deleteSelectedBtnEvent } from "./ag-grid-toolbar.js";
+import { handleMap } from "../map/handle-map.js";
 
 let gridApi;
 
@@ -118,7 +119,10 @@ export function handleToolbar(gridApi) {
   );
 
   const refreshGridBtn = document.getElementById("refreshGridBtn");
-  refreshGridBtn.addEventListener("click", () => loadShipments(gridApi));
+  refreshGridBtn.addEventListener("click", () => {
+    console.log("Refreshing grid data and updating map...");
+    loadShipments(gridApi);
+  });
 }
 
 export function loadShipments(gridApi) {
@@ -131,9 +135,12 @@ export function loadShipments(gridApi) {
     .then((response) => response.json())
     .then((data) => {
       gridApi.setGridOption("rowData", data.rows);
+      // Update map after data is loaded
+      setTimeout(() => {
+        handleMap(gridApi);
+      }, 100); // Small delay to ensure grid is fully rendered
     })
     .catch((error) => {
       console.error("Error fetching data:", error);
-      params.fail();
     });
 }

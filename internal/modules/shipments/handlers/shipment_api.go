@@ -121,12 +121,12 @@ func (h *shipmentAPIHandler) GetShipmentsForGrid(c echo.Context) error {
 		})
 	}
 
-	var req dto.GridDataRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "invalid request body",
-		})
-	}
+	// var req dto.GridDataRequest
+	// if err := c.Bind(&req); err != nil {
+	// 	return c.JSON(http.StatusBadRequest, map[string]string{
+	// 		"error": "invalid request body",
+	// 	})
+	// }
 
 	gridData, err := h.shipmentService.GetShipmentsForGrid(ctx, userID)
 	if err != nil {
