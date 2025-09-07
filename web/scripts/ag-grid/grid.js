@@ -1,6 +1,6 @@
 import { actionCellRenderer } from "./action-cell-renderer.js";
 import { deleteSelectedBtnEvent } from "./ag-grid-toolbar.js";
-import { handleMap } from "../map/handle-map.js";
+import { handleMap, updateMapMarkers } from "../map/handle-map.js";
 
 let gridApi;
 
@@ -170,6 +170,25 @@ const gridOptions = {
       shippingStatus: { values: ["IN_TRANSIT", "UNKNOWN", "PLANNED"] },
     });
   },
+
+  // Map update events
+  onFilterChanged: (event) => {
+    if (window.currentMap && window.currentMap._shipmentMarkers) {
+      setTimeout(() => updateMapMarkers(window.currentMap, event.api), 100);
+    }
+  },
+
+  onPaginationChanged: (event) => {
+    if (window.currentMap && window.currentMap._shipmentMarkers) {
+      setTimeout(() => updateMapMarkers(window.currentMap, event.api), 100);
+    }
+  },
+
+  onSortChanged: (event) => {
+    if (window.currentMap && window.currentMap._shipmentMarkers) {
+      setTimeout(() => updateMapMarkers(window.currentMap, event.api), 100);
+    }
+  },
   getRowId: (params) => String(params.data.id),
 };
 
@@ -205,7 +224,8 @@ export function loadShipments(gridApi) {
       gridApi.setGridOption("rowData", data.rows);
       // Update map after data is loaded
       setTimeout(() => {
-        handleMap(gridApi);
+        const map = handleMap(gridApi);
+        window.currentMap = map; // Store map globally for event handlers
       }, 100); // Small delay to ensure grid is fully rendered
     })
     .catch((error) => {
