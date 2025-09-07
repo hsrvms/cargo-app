@@ -5,7 +5,7 @@
  * @returns {Array} Array of shipment data objects
  */
 export function getVisibleShipments(gridApi, options = {}) {
-  const { includeRenderedOnly = false, debug = true } = options; // Enable debug by default
+  const { includeRenderedOnly = false, debug = false } = options; // Enable debug by default
 
   if (!gridApi) {
     console.error("getVisibleShipments: gridApi is required");

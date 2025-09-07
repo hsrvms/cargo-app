@@ -9,10 +9,11 @@ export function handleMap(gridApi) {
   }
 
   var map = L.map("miniMap").setView([20, 0], 2);
-  const visibleShipments = getVisibleShipments(gridApi);
+  const visibleShipments = getVisibleShipments(gridApi, { debug: false });
   console.log("Visible shipments in map:", visibleShipments);
 
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    minZoom: 2,
     maxZoom: 19,
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',

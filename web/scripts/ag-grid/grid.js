@@ -7,7 +7,7 @@ let gridApi;
 const rowSelection = {
   mode: "multiRow",
   checkboxes: true,
-  // enableClickSelection: true,
+  // enableClickSelection: false,
 };
 
 const columnDefs = [
@@ -24,34 +24,16 @@ const columnDefs = [
           class="text-blue-600 dark:text-blue-300 hover:underline font-medium"
           onclick="openModalFetchDetails('${params.data.id}')"
         >
-          ${params.value}
+          ${params.value} - ${params.data.shipmentType}
         </button>
       `;
     },
-  },
-  {
-    field: "shipmentType",
-    headerName: "Type",
-    filter: "agSetColumnFilter", // Enterprise
-    maxWidth: 90,
-  },
-  {
-    field: "sealineCode",
-    headerName: "Sealine",
-    filter: "agSetColumnFilter",
-    maxWidth: 120,
-  },
-  {
-    field: "sealineName",
-    headerName: "Sealine Name",
-    filter: "agTextColumnFilter",
   },
   {
     field: "shippingStatus",
     headerName: "Status",
     filter: "agSetColumnFilter",
     maxWidth: 120,
-    // cellStyle: { textAlign: "center" },
     cellRenderer: (params) => {
       const statusMap = {
         IN_TRANSIT: "In Transit",
@@ -72,13 +54,9 @@ const columnDefs = [
     },
   },
   {
-    field: "updatedAt",
-    headerName: "Last Updated",
-  },
-  {
     field: "originPort",
     headerName: "Origin",
-    maxWidth: 150,
+    width: 200,
     cellRenderer: (params) => {
       const pol = params.data?.route?.pol;
       if (pol && pol.location) {
@@ -90,7 +68,7 @@ const columnDefs = [
   {
     field: "destinationPort",
     headerName: "Destination",
-    maxWidth: 150,
+    width: 200,
     cellRenderer: (params) => {
       const pod = params.data?.route?.pod;
       if (pod && pod.location) {
@@ -115,7 +93,7 @@ const columnDefs = [
   {
     field: "containerCount",
     headerName: "Containers",
-    maxWidth: 100,
+    maxWidth: 120,
     cellRenderer: (params) => {
       const containers = params.data?.containers;
       if (containers && containers.length > 0) {
@@ -127,7 +105,7 @@ const columnDefs = [
   {
     field: "nextETA",
     headerName: "Next ETA",
-    maxWidth: 120,
+    width: 120,
     cellRenderer: (params) => {
       const route = params.data?.route;
       if (!route) return "N/A";
@@ -157,6 +135,7 @@ const columnDefs = [
     width: 100,
     pinned: "right",
     sortable: false,
+    resizable: false,
     suppressMovable: true,
     cellRenderer: actionCellRenderer,
   },
@@ -169,7 +148,7 @@ const gridOptions = {
     suppressHeaderMenuButton: true,
     resizable: true,
     sortable: true,
-    filter: true,
+    // filter: true,
     // suppressHeaderFilterButton: true,
   },
   rowSelection,
@@ -179,7 +158,6 @@ const gridOptions = {
 
   // Performance optimizations for richer data
   rowBuffer: 10,
-  suppressRowClickSelection: false,
   suppressCellFocus: true,
   animateRows: true,
 
@@ -224,17 +202,6 @@ export function loadShipments(gridApi) {
   })
     .then((response) => response.json())
     .then((data) => {
-      console.group("Grid Data Debug:");
-      console.log("Full API response:", data);
-      console.log("Number of rows:", data.rows?.length || 0);
-      if (data.rows && data.rows.length > 0) {
-        console.log("First row sample:", data.rows[0]);
-        console.log("First row route data:", data.rows[0]?.route);
-        console.log("First row containers:", data.rows[0]?.containers);
-        console.log("First row vessels:", data.rows[0]?.vessels);
-      }
-      console.groupEnd();
-
       gridApi.setGridOption("rowData", data.rows);
       // Update map after data is loaded
       setTimeout(() => {
