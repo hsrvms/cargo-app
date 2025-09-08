@@ -61,8 +61,7 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
   markers = [];
   routes = [];
 
-  // Add map controls and legend
-  addMapLegend(currentMapInstance);
+  // Add map controls
   addMapControls(currentMapInstance, gridApi);
 
   // Set up cross-page communication
@@ -456,55 +455,6 @@ export function createHighlightedIcon(status) {
 }
 
 // Complete implementations from original handle-map.js
-export function addMapLegend(map) {
-  const legend = L.control({ position: "topright" });
-
-  legend.onAdd = function (map) {
-    const div = L.DomUtil.create("div", "map-legend");
-
-    div.innerHTML = `
-      <div class="legend-title">Shipment Status</div>
-      <div class="legend-item">
-        <div class="legend-marker" style="background-color: #DBEAFE; border-color: #3B82F6;">
-          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; border-radius: 50%; background-color: #3B82F6;"></div>
-        </div>
-        <span>In Transit</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-marker" style="background-color: #D1FAE5; border-color: #10B981;">
-          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; border-radius: 50%; background-color: #10B981;"></div>
-        </div>
-        <span>Delivered</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-marker" style="background-color: #FEF3C7; border-color: #F59E0B;">
-          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; border-radius: 50%; background-color: #F59E0B;"></div>
-        </div>
-        <span>Planned</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-marker" style="background-color: #F3F4F6; border-color: #6B7280;">
-          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; border-radius: 50%; background-color: #6B7280;"></div>
-        </div>
-        <span>Unknown</span>
-      </div>
-
-      <div class="legend-title" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;">Route Types</div>
-      <div class="legend-item">
-        <div style="width: 20px; height: 2px; background: repeating-linear-gradient(to right, #06B6D4 0px, #06B6D4 3px, transparent 3px, transparent 9px); margin-right: 6px; border-radius: 1px;"></div>
-        <span style="font-size: 11px;">Sea</span>
-      </div>
-      <div class="legend-item">
-        <div style="width: 20px; height: 2px; background: repeating-linear-gradient(to right, #10B981 0px, #10B981 2px, transparent 2px, transparent 6px); margin-right: 6px; border-radius: 1px;"></div>
-        <span style="font-size: 11px;">Land</span>
-      </div>
-    `;
-
-    return div;
-  };
-
-  legend.addTo(map);
-}
 
 export function addMapControls(map, gridApi) {
   const mapControls = L.control({ position: "topleft" });
@@ -820,15 +770,114 @@ export function fitMapToMarkers(map, coordinates) {
 }
 
 export function createShipmentPopup(shipment) {
-  return `
-    <div class="shipment-popup">
-      <h3>${shipment.shipmentNumber} - ${shipment.shipmentType}</h3>
-      <p><strong>Status:</strong> ${shipment.shippingStatus}</p>
-      <p><strong>Vessel:</strong> ${shipment.vessels?.[0]?.name || "N/A"}</p>
-      <p><strong>Origin:</strong> ${shipment.route?.pol?.location?.name || "N/A"}</p>
-      <p><strong>Destination:</strong> ${shipment.route?.pod?.location?.name || "N/A"}</p>
+  try {
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "N/A";
+      try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return "N/A";
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      } catch (error) {
+        console.warn("Error formatting date:", dateStr, error);
+        return "N/A";
+      }
+    };
+
+    const getRouteInfo = () => {
+      if (!shipment.route) return { origin: "N/A", destination: "N/A" };
+
+      const origin =
+        shipment.route.pol?.location?.name ||
+        shipment.route.prepol?.location?.name ||
+        "N/A";
+      const destination =
+        shipment.route.pod?.location?.name ||
+        shipment.route.postpod?.location?.name ||
+        "N/A";
+
+      return { origin, destination };
+    };
+
+    const getVesselInfo = () => {
+      try {
+        if (!shipment.vessels || shipment.vessels.length === 0) return "N/A";
+        const vessel = shipment.vessels[0];
+        return vessel?.name || "Unknown Vessel";
+      } catch (error) {
+        console.warn("Error getting vessel info:", error);
+        return "N/A";
+      }
+    };
+
+    const getStatusBadge = (status) => {
+      const statusConfig = {
+        IN_TRANSIT: { label: "In Transit", color: "blue" },
+        DELIVERED: { label: "Delivered", color: "green" },
+        PLANNED: { label: "Planned", color: "yellow" },
+        UNKNOWN: { label: "Unknown", color: "gray" },
+      };
+
+      const config = statusConfig[status] || statusConfig.UNKNOWN;
+      return `<span style="background: ${config.color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${config.label}</span>`;
+    };
+
+    const routeInfo = getRouteInfo();
+    const lastUpdate = formatDate(
+      shipment.routeData?.coordinates?.updatedAt || shipment.updatedAt,
+    );
+
+    return `
+    <div style="min-width: 200px;">
+      <div style="font-weight: bold; margin-bottom: 8px; color: #2563eb;">
+        ${shipment.shipmentNumber || "N/A"}
+      </div>
+
+      <div style="margin-bottom: 4px;">
+        <strong>Status:</strong> ${getStatusBadge(shipment.shippingStatus)}
+      </div>
+
+      <div style="margin-bottom: 4px;">
+        <strong>Route:</strong><br>
+        <small>${routeInfo.origin} → ${routeInfo.destination}</small>
+      </div>
+
+      <div style="margin-bottom: 4px;">
+        <strong>Vessel:</strong> ${getVesselInfo()}
+      </div>
+
+      <div style="margin-bottom: 4px;">
+        <strong>Sealine:</strong> ${shipment.sealineName || shipment.sealineCode || "N/A"}
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <strong>Containers:</strong> ${shipment.containers?.length || 0}
+      </div>
+
+      <div style="font-size: 11px; color: #666; border-top: 1px solid #eee; padding-top: 4px;">
+        Last updated: ${lastUpdate}
+      </div>
+
+      <div style="margin-top: 8px;">
+        <button onclick="openModalFetchDetails('${shipment.id}')"
+                style="background: #2563eb; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+          View Details
+        </button>
+      </div>
     </div>
   `;
+  } catch (error) {
+    console.error("Error creating popup content:", error);
+    return `
+      <div style="color: red; padding: 8px;">
+        <strong>Error loading shipment details</strong><br>
+        ID: ${shipment?.id || "Unknown"}
+      </div>
+    `;
+  }
 }
 
 export function showNoCoordinatesNotification(count) {
