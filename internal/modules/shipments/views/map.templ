@@ -1,0 +1,241 @@
+package views
+
+templ MapPage() {
+	<!DOCTYPE html>
+	<html
+		lang="en"
+		x-data="{
+			theme: localStorage.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+		}"
+		:class="{ 'dark': theme === 'dark' }"
+		x-init="$watch('theme', value => localStorage.theme = value)"
+	>
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Shipment Map - Real-time Tracking</title>
+			<link rel="stylesheet" href="/assets/css/styles.css"/>
+			<script src="/assets/js/tailwindcss.js"></script>
+			<script src="/config/tailwind.config.js"></script>
+			<script src="/assets/js/htmx.min.js" defer></script>
+			<script src="/assets/js/leaflet.js"></script>
+			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+			<style>
+				/* Custom styles for full-screen map */
+				.map-container {
+					height: calc(100vh - 140px);
+					min-height: 600px;
+				}
+
+				/* Map controls are handled by JavaScript */
+
+				.map-status {
+					position: absolute;
+					bottom: 10px;
+					left: 10px;
+					z-index: 1000;
+					background: rgba(255, 255, 255, 0.9);
+					padding: 8px 12px;
+					border-radius: 6px;
+					font-size: 12px;
+					box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+				}
+
+				.dark .map-status {
+					background: rgba(31, 41, 55, 0.9);
+					color: white;
+				}
+
+				.connection-indicator {
+					display: inline-block;
+					width: 8px;
+					height: 8px;
+					border-radius: 50%;
+					margin-right: 6px;
+				}
+
+				.connection-indicator.connected {
+					background-color: #10B981;
+					animation: pulse-green 2s infinite;
+				}
+
+				.connection-indicator.disconnected {
+					background-color: #EF4444;
+				}
+
+				@keyframes pulse-green {
+					0% { opacity: 1; }
+					50% { opacity: 0.5; }
+					100% { opacity: 1; }
+				}
+			</style>
+		</head>
+		<body class="min-h-screen bg-gray-50 dark:bg-gray-900">
+			<!-- Header -->
+			<header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+				<div class="container mx-auto px-4 py-4">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center space-x-4">
+							<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Shipment Map</h1>
+							<span class="text-sm text-gray-500 dark:text-gray-400">Real-time Vessel Tracking</span>
+						</div>
+						<div class="flex items-center space-x-4">
+							<!-- Connection Status -->
+							<div id="connectionStatus" class="flex items-center text-sm">
+								<span class="connection-indicator disconnected"></span>
+								<span class="status-text">Connecting...</span>
+							</div>
+							<!-- Data Status -->
+							<div id="dataStatus" class="text-sm text-gray-600 dark:text-gray-300">
+								<span class="shipment-count">0</span> shipments
+							</div>
+							<!-- Navigation -->
+							<a
+								href="/shipments"
+								class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+							>
+								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+								</svg>
+								Back to Grid
+							</a>
+							<!-- Theme Toggle -->
+							<button
+								@click="theme = theme === 'dark' ? 'light' : 'dark'"
+								class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+							>
+								<svg x-show="theme === 'light'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+								</svg>
+								<svg x-show="theme === 'dark'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+								</svg>
+							</button>
+						</div>
+					</div>
+				</div>
+			</header>
+			<!-- Main Map Content -->
+			<main class="container mx-auto px-4 py-6">
+				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+					<div class="relative">
+						<!-- Map Container -->
+						<div id="standaloneMap" class="map-container w-full rounded-md"></div>
+						<!-- Map Controls are handled by JavaScript -->
+						<!-- Map Status -->
+						<div class="map-status">
+							<div id="mapStatusContent">
+								<span class="connection-indicator disconnected"></span>
+								<span>Loading...</span>
+							</div>
+						</div>
+					</div>
+					<!-- Map Legend -->
+					<div class="p-4 border-t border-gray-200 dark:border-gray-700">
+						<div class="flex flex-wrap items-center justify-between">
+							<div class="flex items-center space-x-6">
+								<h3 class="text-sm font-medium text-gray-900 dark:text-white">Legend:</h3>
+								<div class="flex items-center space-x-4">
+									<div class="flex items-center">
+										<div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+										<span class="text-xs text-gray-600 dark:text-gray-400">In Transit</span>
+									</div>
+									<div class="flex items-center">
+										<div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+										<span class="text-xs text-gray-600 dark:text-gray-400">Delivered</span>
+									</div>
+									<div class="flex items-center">
+										<div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+										<span class="text-xs text-gray-600 dark-gray-400">Planned</span>
+									</div>
+									<div class="flex items-center">
+										<div class="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+										<span class="text-xs text-gray-600 dark:text-gray-400">Unknown</span>
+									</div>
+								</div>
+							</div>
+							<div class="text-xs text-gray-500 dark:text-gray-400">
+								<span id="lastUpdateTime">Last updated: Never</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+			<!-- Toast Container -->
+			<div id="toast-container" class="fixed top-5 right-5 space-y-3 z-50"></div>
+			<!-- Scripts -->
+			<script type="module">
+				import { initEnhancedMap, getMapStatus } from '/scripts/map/handle-map-enhanced.js';
+				import { mapDataService } from '/scripts/map/map-data-service.js';
+
+				// Initialize the standalone map when DOM is loaded
+				document.addEventListener('DOMContentLoaded', async () => {
+					console.log('🗺️ Initializing standalone map page...');
+
+					// Initialize the enhanced map in standalone mode
+					const map = initEnhancedMap(null, {
+						mapContainerId: 'standaloneMap',
+						standalone: true,
+						initialView: [20, 0],
+						initialZoom: 2
+					});
+
+					if (!map) {
+						console.error('❌ Failed to initialize map');
+						return;
+					}
+
+					// Update UI based on service status
+					function updateConnectionStatus() {
+						const status = mapDataService.getStatus();
+						const connectionStatus = document.getElementById('connectionStatus');
+						const indicator = connectionStatus.querySelector('.connection-indicator');
+						const statusText = connectionStatus.querySelector('.status-text');
+						const dataStatus = document.getElementById('dataStatus');
+						const shipmentCount = dataStatus.querySelector('.shipment-count');
+						const mapStatusContent = document.getElementById('mapStatusContent');
+						const lastUpdateTime = document.getElementById('lastUpdateTime');
+
+						if (status.connected) {
+							indicator.className = 'connection-indicator connected';
+							statusText.textContent = 'Connected';
+							shipmentCount.textContent = status.shipmentCount;
+
+							mapStatusContent.innerHTML = `
+								<span class="connection-indicator connected"></span>
+								<span>${status.shipmentCount} shipments • ${status.selectedCount} selected</span>
+							`;
+
+							if (status.lastUpdate) {
+								const updateTime = new Date(status.lastUpdate);
+								lastUpdateTime.textContent = `Last updated: ${updateTime.toLocaleTimeString()}`;
+							}
+						} else {
+							indicator.className = 'connection-indicator disconnected';
+							statusText.textContent = 'Disconnected';
+							shipmentCount.textContent = '0';
+							mapStatusContent.innerHTML = `
+								<span class="connection-indicator disconnected"></span>
+								<span>No connection to grid data</span>
+							`;
+						}
+					}
+
+					// Set up periodic status updates
+					updateConnectionStatus();
+					setInterval(updateConnectionStatus, 2000);
+
+					// Map controls are handled by the enhanced map handler
+
+					console.log('✅ Standalone map page initialized successfully');
+				});
+
+				// Debug function accessible from console
+				window.getMapStatus = () => {
+					console.log('Map Status:', getMapStatus());
+					console.log('Service Status:', mapDataService.getStatus());
+				};
+			</script>
+		</body>
+	</html>
+}

@@ -26,6 +26,11 @@ func (h *shipmentWEBHandler) ViewShipmentPage(c echo.Context) error {
 	return component.Render(c.Request().Context(), c.Response().Writer)
 }
 
+func (h *shipmentWEBHandler) ViewMapPage(c echo.Context) error {
+	component := views.MapPage()
+	return component.Render(c.Request().Context(), c.Response().Writer)
+}
+
 func (h *shipmentWEBHandler) GetShipmentDetailsHTML(c echo.Context) error {
 	ctx := c.Request().Context()
 

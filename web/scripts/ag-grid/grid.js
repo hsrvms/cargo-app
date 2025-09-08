@@ -1,6 +1,6 @@
 import { actionCellRenderer } from "./action-cell-renderer.js";
 import { deleteSelectedBtnEvent } from "./ag-grid-toolbar.js";
-import { handleMap, updateMapMarkers } from "../map/handle-map.js";
+// Map integration now handled by enhanced map service
 
 let gridApi;
 
@@ -171,24 +171,7 @@ const gridOptions = {
     });
   },
 
-  // Map update events
-  onFilterChanged: (event) => {
-    if (window.currentMap && window.currentMap._shipmentMarkers) {
-      setTimeout(() => updateMapMarkers(window.currentMap, event.api), 100);
-    }
-  },
-
-  onPaginationChanged: (event) => {
-    if (window.currentMap && window.currentMap._shipmentMarkers) {
-      setTimeout(() => updateMapMarkers(window.currentMap, event.api), 100);
-    }
-  },
-
-  onSortChanged: (event) => {
-    if (window.currentMap && window.currentMap._shipmentMarkers) {
-      setTimeout(() => updateMapMarkers(window.currentMap, event.api), 100);
-    }
-  },
+  // Map integration now handled by MapDataService in enhanced map
   getRowId: (params) => String(params.data.id),
 };
 
@@ -222,11 +205,7 @@ export function loadShipments(gridApi) {
     .then((response) => response.json())
     .then((data) => {
       gridApi.setGridOption("rowData", data.rows);
-      // Update map after data is loaded
-      setTimeout(() => {
-        const map = handleMap(gridApi);
-        window.currentMap = map; // Store map globally for event handlers
-      }, 100); // Small delay to ensure grid is fully rendered
+      // Map updates now handled automatically by MapDataService
     })
     .catch((error) => {
       console.error("Error fetching data:", error);
