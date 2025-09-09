@@ -15,6 +15,9 @@ type ShipmentDetailsResponse struct {
 	ShippingStatus string                      `json:"shippingStatus"`
 	CreatedAt      time.Time                   `json:"createdAt"`
 	UpdatedAt      time.Time                   `json:"updatedAt"`
+	Recipient      string                      `json:"recipient"`
+	Address        string                      `json:"address"`
+	Notes          string                      `json:"notes"`
 	Locations      []ShipmentLocationResponse  `json:"locations"`
 	Route          ShipmentRouteResponse       `json:"route"`
 	Vessels        []ShipmentVesselResponse    `json:"vessels"`

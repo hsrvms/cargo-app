@@ -5,6 +5,7 @@ import (
 	"go-starter/internal/modules/auth/services"
 	"go-starter/internal/modules/auth/views"
 	"go-starter/internal/modules/auth/views/errors"
+	"log"
 	"net/http"
 
 	"strings"
@@ -43,13 +44,13 @@ func (h *AuthWEBHandler) Login(c echo.Context) error {
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return h.renderError(c, http.StatusBadRequest, "Invalid email or password")
+		return h.renderLoginWithError(c, http.StatusBadRequest, "Invalid email or password")
 	}
 
 	response, err := h.authService.Login(c.Request().Context(), &req)
 	if err != nil {
 		statusCode, message := h.categorizeAuthError(err)
-		return h.renderError(c, statusCode, message)
+		return h.renderLoginWithError(c, statusCode, message)
 	}
 
 	return h.handleAuthSuccess(c, response.Token, http.StatusOK)
@@ -64,16 +65,72 @@ func (h *AuthWEBHandler) Register(c echo.Context) error {
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return h.renderError(c, http.StatusBadRequest, "Invalid email or password")
+		return h.renderRegisterWithError(c, http.StatusBadRequest, "Invalid email or password")
 	}
 
 	response, err := h.authService.Register(c.Request().Context(), &req)
 	if err != nil {
 		statusCode, message := h.categorizeAuthError(err)
-		return h.renderError(c, statusCode, message)
+		return h.renderRegisterWithError(c, statusCode, message)
 	}
 
 	return h.handleAuthSuccess(c, response.Token, http.StatusCreated)
+}
+
+func (h *AuthWEBHandler) Logout(c echo.Context) error {
+	// Clear the auth cookie
+	cookie := &http.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // make it true on https
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   -1, // Delete the cookie
+	}
+	c.SetCookie(cookie)
+
+	// Redirect to login page with full page reload
+	return c.Redirect(http.StatusSeeOther, "/login")
+}
+
+func (h *AuthWEBHandler) GetUserInfo(c echo.Context) (*services.Claims, error) {
+	// Get the auth token from cookie
+	cookie, err := c.Cookie("auth_token")
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a temporary JWT service to validate the token
+	jwtService := services.NewJWTService()
+	claims, err := jwtService.ValidateToken(cookie.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return claims, nil
+}
+
+func (h *AuthWEBHandler) HandleRoot(c echo.Context) error {
+	log.Println("Root route accessed, checking authentication...")
+
+	// Check if user is already authenticated
+	cookie, err := c.Cookie("auth_token")
+	if err != nil {
+		log.Println("No auth token found → redirecting to login")
+		return c.Redirect(http.StatusSeeOther, "/login")
+	}
+
+	// Validate the token
+	jwtService := services.NewJWTService()
+	claims, err := jwtService.ValidateToken(cookie.Value)
+	if err != nil {
+		log.Printf("Invalid auth token → redirecting to login: %v", err)
+		return c.Redirect(http.StatusSeeOther, "/login")
+	}
+
+	log.Printf("User %s authenticated → redirecting to shipments", claims.Email)
+	return c.Redirect(http.StatusSeeOther, "/shipments")
 }
 
 func (h *AuthWEBHandler) setAuthCokie(c echo.Context, token string) {
@@ -95,10 +152,24 @@ func (h *AuthWEBHandler) renderError(c echo.Context, statusCode int, message str
 	return errors.AuthError(message).Render(c.Request().Context(), c.Response().Writer)
 }
 
+func (h *AuthWEBHandler) renderLoginWithError(c echo.Context, statusCode int, message string) error {
+	c.Response().Header().Set("Content-Type", "text/html")
+	c.Response().WriteHeader(statusCode)
+	component := views.LoginPageWithError(message)
+	return component.Render(c.Request().Context(), c.Response().Writer)
+}
+
+func (h *AuthWEBHandler) renderRegisterWithError(c echo.Context, statusCode int, message string) error {
+	c.Response().Header().Set("Content-Type", "text/html")
+	c.Response().WriteHeader(statusCode)
+	component := views.RegisterPageWithError(message)
+	return component.Render(c.Request().Context(), c.Response().Writer)
+}
+
 func (h *AuthWEBHandler) handleAuthSuccess(c echo.Context, token string, statusCode int) error {
 	h.setAuthCokie(c, token)
-	c.Response().Header().Set("HX-Location", "/dashboard")
-	return c.NoContent(statusCode)
+	// Use proper HTTP redirect for full page reload to ensure CSS loads correctly
+	return c.Redirect(http.StatusSeeOther, "/shipments")
 }
 
 func (h *AuthWEBHandler) categorizeAuthError(err error) (int, string) {

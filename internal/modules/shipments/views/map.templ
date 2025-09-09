@@ -1,0 +1,316 @@
+package views
+
+import "go-starter/internal/modules/shipments/views/components"
+
+templ MapPage() {
+	<!DOCTYPE html>
+	<html
+		lang="en"
+		x-data="{
+			theme: localStorage.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+		}"
+		:class="{ 'dark': theme === 'dark' }"
+		x-init="$watch('theme', value => localStorage.theme = value)"
+	>
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Shipment Map - Real-time Tracking</title>
+			<link rel="stylesheet" href="/assets/css/styles.css"/>
+			<script src="/assets/js/tailwindcss.js"></script>
+			<script src="/config/tailwind.config.js"></script>
+			<script src="/assets/js/htmx.min.js" defer></script>
+			<script src="/assets/js/htmx-ext-response-targets.js" defer></script>
+			<script src="/assets/js/leaflet.js"></script>
+			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+			<script>
+				// Global HTMX redirect handling for proper page reloads
+				document.addEventListener('DOMContentLoaded', function() {
+					// Handle redirects from HTMX responses with full page reload
+					document.body.addEventListener('htmx:responseError', function(evt) {
+						// Check if it's actually a redirect (3xx status)
+						if (evt.detail.xhr.status >= 300 && evt.detail.xhr.status < 400) {
+							const location = evt.detail.xhr.getResponseHeader('Location');
+							if (location) {
+								window.location.href = location;
+								return;
+							}
+						}
+					});
+
+					document.body.addEventListener('htmx:afterRequest', function(evt) {
+						// Handle successful redirects
+						if (evt.detail.xhr.status >= 300 && evt.detail.xhr.status < 400) {
+							const location = evt.detail.xhr.getResponseHeader('Location');
+							if (location) {
+								window.location.href = location;
+								return;
+							}
+						}
+					});
+				});
+			</script>
+			<style>
+				/* Custom styles for full-screen map */
+				.map-container {
+					height: calc(100vh - 200px);
+					min-height: 600px;
+				}
+
+				/* Map controls are handled by JavaScript */
+
+				.map-status {
+					position: absolute;
+					bottom: 10px;
+					left: 10px;
+					z-index: 1000;
+					background: rgba(255, 255, 255, 0.9);
+					padding: 8px 12px;
+					border-radius: 6px;
+					font-size: 12px;
+					box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+				}
+
+				.dark .map-status {
+					background: rgba(31, 41, 55, 0.9);
+					color: white;
+				}
+
+				.connection-indicator {
+					display: inline-block;
+					width: 8px;
+					height: 8px;
+					border-radius: 50%;
+					margin-right: 6px;
+				}
+
+				.connection-indicator.connected {
+					background-color: #10B981;
+					animation: pulse-green 2s infinite;
+				}
+
+				.connection-indicator.disconnected {
+					background-color: #EF4444;
+				}
+
+				@keyframes pulse-green {
+					0% { opacity: 1; }
+					50% { opacity: 0.5; }
+					100% { opacity: 1; }
+				}
+			</style>
+		</head>
+		<body class="min-h-screen bg-gray-50 dark:bg-gray-900">
+			<!-- Header -->
+			@components.MapHeader()
+			<!-- Main Map Content -->
+			<main class="container mx-auto px-4 py-6">
+				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+					<div class="relative">
+						<!-- Map Container -->
+						<div id="standaloneMap" class="map-container w-full rounded-md"></div>
+						<!-- Map Controls are handled by JavaScript -->
+						<!-- Map Status -->
+						<div class="map-status">
+							<div id="mapStatusContent">
+								<span class="connection-indicator disconnected"></span>
+								<span>Loading...</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+			<!-- Modal (hidden by default) -->
+			<div
+				id="shipment-modal"
+				class="fixed inset-0 z-[9999] hidden opacity-0 bg-black bg-opacity-50 transition-opacity duration-300"
+				onclick="closeModal()"
+			>
+				<div class="flex items-center justify-center min-h-screen px-4 py-6">
+					<div
+						class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
+						id="modal-content"
+						onclick="event.stopPropagation()"
+					>
+						<div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+							<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Shipment Details</h2>
+							<button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200">
+								<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
+						</div>
+						<div id="modal-body" class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+							<!-- HTMX will load shipment details here -->
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- Toast Container -->
+			<div id="toast-container" class="fixed top-5 right-5 space-y-3 z-50"></div>
+			<!-- Scripts -->
+			<script type="module">
+				import { initEnhancedMap, getMapStatus, updateMapWithShipments } from '/scripts/map/handle-map-enhanced.js';
+				import { mapDataService } from '/scripts/map/map-data-service.js';
+				import { initModalFunctions } from '/scripts/ag-grid/modal-functions.js';
+
+				// Initialize the standalone map when DOM is loaded
+				document.addEventListener('DOMContentLoaded', async () => {
+					console.log('🗺️ Initializing standalone map page...');
+
+					// Initialize modal functions
+					initModalFunctions();
+
+					// Initialize the enhanced map in standalone mode
+					const map = initEnhancedMap(null, {
+						mapContainerId: 'standaloneMap',
+						standalone: true,
+						initialView: [20, 0],
+						initialZoom: 2
+					});
+
+					if (!map) {
+						console.error('❌ Failed to initialize map');
+						return;
+					}
+
+					// Try to get filtered data from grid via service first
+					let hasReceivedData = false;
+
+					// Set up listener for data from grid page
+					mapDataService.addEventListener('shipmentsUpdate', (data) => {
+						console.log(`📊 Received ${data.visibleShipments.length} filtered shipments from grid`);
+						updateMapWithShipments(data.visibleShipments, data.selectedShipments || []);
+						hasReceivedData = true;
+						updateConnectionStatus(); // Update status when data arrives
+					});
+
+					// Also listen for initial data response
+					let gridPageDetected = false;
+					mapDataService.addEventListener('initialDataReceived', (data) => {
+						gridPageDetected = true;
+						if (data.hasData && data.visibleShipments && data.visibleShipments.length > 0) {
+							console.log(`📊 Received initial data with ${data.visibleShipments.length} filtered shipments from grid`);
+							updateMapWithShipments(data.visibleShipments, data.selectedShipments || []);
+							hasReceivedData = true;
+							updateConnectionStatus(); // Update status when data arrives
+						} else {
+							console.log('📡 Grid page detected but no data available yet, will wait for updates...');
+						}
+					});
+
+					// Request initial data from grid page if it's open
+					mapDataService.requestInitialData();
+
+					// Wait longer to see if we get filtered data from the grid
+					setTimeout(async () => {
+						if (!hasReceivedData) {
+							console.log('🔄 No filtered data received from grid within 2 seconds, checking if grid page exists...');
+
+							// Check if grid page was detected
+							if (gridPageDetected) {
+								console.log('📡 Grid page detected but no data received yet, waiting longer...');
+								// If grid page exists, wait a bit more for data
+								setTimeout(async () => {
+									if (!hasReceivedData) {
+										console.log('⚠️ Still no data from grid after 4 seconds total, falling back to API...');
+										await loadAllShipmentsFromAPI();
+									}
+								}, 2000); // Wait another 2 seconds
+							} else {
+								console.log('🔄 No grid page detected, loading all shipments...');
+								await loadAllShipmentsFromAPI();
+							}
+						}
+					}, 2000); // Wait 2 seconds for potential grid data
+
+					// Helper function to load all shipments from API
+					async function loadAllShipmentsFromAPI() {
+						try {
+							const response = await fetch('/api/shipments/grid-data');
+							if (response.ok) {
+								const data = await response.json();
+								console.log(`📊 Loaded ${data.rows.length} shipments for standalone map`);
+								updateMapWithShipments(data.rows, []);
+								hasReceivedData = true;
+
+								// Update MapDataService state properly
+								mapDataService.broadcastShipments(data.rows, []);
+
+								updateConnectionStatus(); // Update status when API data is loaded
+								// Don't broadcast all data back to grid - it should control the filtering
+							} else {
+								console.error('Failed to load shipments data:', response.status);
+							}
+						} catch (error) {
+							console.error('Error loading shipments data:', error);
+						}
+					}
+
+					// Update UI based on service status
+					function updateConnectionStatus() {
+						const status = mapDataService.getStatus();
+						console.log('🔄 Updating connection status:', status);
+						const connectionStatus = document.getElementById('connectionStatus');
+						const indicator = connectionStatus?.querySelector('.connection-indicator');
+						const statusText = connectionStatus?.querySelector('.status-text');
+						const dataStatus = document.getElementById('dataStatus');
+						const shipmentCount = dataStatus?.querySelector('.shipment-count');
+						const mapStatusContent = document.getElementById('mapStatusContent');
+						const lastUpdateTime = document.getElementById('lastUpdateTime');
+
+						if (status.connected && status.hasData) {
+							console.log('✅ Status: Connected with data');
+							if (indicator) indicator.className = 'connection-indicator connected';
+							if (statusText) {
+								statusText.textContent = 'Connected';
+								statusText.className = "text-sm text-gray-600 dark:text-gray-300";
+							}
+							if (shipmentCount) shipmentCount.textContent = status.shipmentCount;
+
+							if (mapStatusContent) {
+								mapStatusContent.innerHTML = `
+									<span class="connection-indicator connected"></span>
+									<span>${status.shipmentCount} shipments • ${status.selectedCount} selected</span>
+								`;
+							}
+
+							if (status.lastUpdate && lastUpdateTime) {
+								const updateTime = new Date(status.lastUpdate);
+								lastUpdateTime.textContent = `Last updated: ${updateTime.toLocaleTimeString()}`;
+							}
+						} else {
+							console.log('⏳ Status: Connected but no data yet');
+							if (indicator) indicator.className = 'connection-indicator connecting';
+							if (statusText) {
+								statusText.textContent = status.connected ? 'Connected' : 'Disconnected';
+								statusText.className = status.connected ? "text-sm text-blue-600 dark:text-blue-400" : "text-sm text-red-600 dark:text-red-400";
+							}
+							if (shipmentCount) shipmentCount.textContent = '0';
+							if (mapStatusContent) {
+								mapStatusContent.innerHTML = `
+									<span class="connection-indicator connecting"></span>
+									<span>${status.connected ? 'Loading shipments...' : 'No connection to grid data'}</span>
+								`;
+							}
+						}
+					}
+
+					// Set up periodic status updates
+					updateConnectionStatus();
+					setInterval(updateConnectionStatus, 2000);
+
+					// Map controls are handled by the enhanced map handler
+
+					console.log('✅ Standalone map page initialized successfully');
+				});
+
+				// Debug function accessible from console
+				window.getMapStatus = () => {
+					console.log('Map Status:', getMapStatus());
+					console.log('Service Status:', mapDataService.getStatus());
+				};
+			</script>
+		</body>
+	</html>
+}

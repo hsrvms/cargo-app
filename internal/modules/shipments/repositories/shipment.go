@@ -8,20 +8,22 @@ import (
 	"go-starter/internal/modules/shipments/models"
 	"go-starter/pkg/db"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type ShipmentRepository interface {
-	NewTx() *gorm.DB
-	CreateShipment(ctx context.Context, userID uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
+	GetDB() *db.Database
+
+	CreateShipment(ctx context.Context, userID uuid.UUID, shipment *models.Shipment, recipient, address, notes string) (*models.Shipment, error)
 	GetShipmentByNumber(ctx context.Context, shipmentNumber string) (*models.Shipment, error)
-	GetShipmentByID(ctx context.Context, id uuid.UUID) (*models.Shipment, error)
+	GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
 	CheckUserAlreadyTracking(ctx context.Context, userID uuid.UUID, shipmentNumber string) (bool, error)
 	CheckUserOwnsShipment(ctx context.Context, userID, shipmentID uuid.UUID) (bool, error)
 	CheckShipmentExists(ctx context.Context, shipmentNumber string) (bool, error)
-	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error)
+	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber, recipient, address, notes string) (*models.Shipment, error)
 	UpdateShipment(ctx context.Context, id uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
 
 	CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error)
@@ -49,9 +51,9 @@ type ShipmentRepository interface {
 	CreateAis(ctx context.Context, ais *models.Ais) (*models.Ais, error)
 	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
 
-	GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
+	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
+	UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error
 
-	// Delete methods for cleaning up shipment related data
 	DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentVessels(ctx context.Context, shipmentID uuid.UUID) error
@@ -61,8 +63,12 @@ type ShipmentRepository interface {
 	DeleteShipmentCoordinates(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentAis(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteAllShipmentRelatedData(ctx context.Context, shipmentID uuid.UUID) error
-	GetDB() *db.Database
 	GetShipmentDataSummary(ctx context.Context, shipmentID uuid.UUID) (*ShipmentDataSummary, error)
+
+	GetShipmentsForGrid(ctx context.Context, userID uuid.UUID) ([]models.Shipment, error)
+	DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error
+	BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error
+	GetAllShipmentsForRefresh(ctx context.Context, skipRecentlyUpdated time.Duration) ([]ShipmentForRefresh, error)
 }
 
 type shipmentRepository struct {
@@ -74,20 +80,21 @@ func NewShipmentRepository(db *db.Database) ShipmentRepository {
 		log.Printf("failed to migrate shipments: %s", err)
 	}
 
+	// Fix the shipment route constraint to include ShipmentID
+	if err := models.FixShipmentRouteConstraint(db.DB); err != nil {
+		log.Printf("failed to fix shipment route constraint: %s", err)
+	}
+
 	return &shipmentRepository{
 		db: db,
 	}
-}
-
-func (r *shipmentRepository) NewTx() *gorm.DB {
-	tx := r.db.DB.Begin()
-	return tx
 }
 
 func (r *shipmentRepository) CreateShipment(
 	ctx context.Context,
 	userID uuid.UUID,
 	shipment *models.Shipment,
+	recipient, address, notes string,
 ) (*models.Shipment, error) {
 	db := r.getDBFromContext(ctx)
 	if err := db.WithContext(ctx).Create(&shipment).Error; err != nil {
@@ -97,6 +104,9 @@ func (r *shipmentRepository) CreateShipment(
 	link := models.UserShipment{
 		UserID:     userID,
 		ShipmentID: shipment.ID,
+		Recipient:  recipient,
+		Address:    address,
+		Notes:      notes,
 	}
 
 	if err := db.WithContext(ctx).Create(&link).Error; err != nil {
@@ -115,11 +125,17 @@ func (r *shipmentRepository) GetShipmentByNumber(ctx context.Context, shipmentNu
 	return &shipment, nil
 }
 
-func (r *shipmentRepository) GetShipmentByID(ctx context.Context, id uuid.UUID) (*models.Shipment, error) {
+func (r *shipmentRepository) GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error) {
 	var shipment models.Shipment
-	err := r.db.DB.WithContext(ctx).First(&shipment, id).Error
+	err := r.db.DB.WithContext(ctx).
+		Joins("JOIN user_shipments us ON us.shipment_id = shipments.id").
+		Where("us.user_id = ? AND shipments.id = ?", userID, shipmentID).
+		First(&shipment).Error
 	if err != nil {
-		return nil, fmt.Errorf("failed to get shipment with ID: %s", id)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("shipment not found or access denied")
+		}
+		return nil, fmt.Errorf("failed to get shipment: %w", err)
 	}
 	return &shipment, nil
 }
@@ -170,7 +186,7 @@ func (r *shipmentRepository) CheckShipmentExists(ctx context.Context, shipmentNu
 	return exists, nil
 }
 
-func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error) {
+func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber, recipient, address, notes string) (*models.Shipment, error) {
 	shipment, err := r.GetShipmentByNumber(ctx, shipmentNumber)
 	if err != nil {
 		return nil, err
@@ -179,6 +195,9 @@ func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, user
 	link := &models.UserShipment{
 		UserID:     userID,
 		ShipmentID: shipment.ID,
+		Recipient:  recipient,
+		Address:    address,
+		Notes:      notes,
 	}
 	if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
 		return nil, fmt.Errorf("failed to link shipment to user: %w", err)
@@ -207,9 +226,36 @@ func (r *shipmentRepository) UpdateShipment(ctx context.Context, id uuid.UUID, u
 
 func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(location).FirstOrCreate(location).Error
+
+	// Try to find existing location by locode
+	var existingLocation models.Location
+	err := db.WithContext(ctx).Where("locode = ?", location.Locode).First(&existingLocation).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Location doesn't exist, create new one
+			err = db.WithContext(ctx).Create(location).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Location exists, update it with fresh data
+		existingLocation.Name = location.Name
+		existingLocation.State = location.State
+		existingLocation.Country = location.Country
+		existingLocation.CountryCode = location.CountryCode
+		existingLocation.Latitude = location.Latitude
+		existingLocation.Longitude = location.Longitude
+		existingLocation.Timezone = location.Timezone
+
+		err = db.WithContext(ctx).Save(&existingLocation).Error
+		if err != nil {
+			return nil, err
+		}
+		*location = existingLocation // Update the passed location with the existing ID
 	}
 
 	if shipmentID != nil {
@@ -250,18 +296,64 @@ func (r *shipmentRepository) FindLocationByID(ctx context.Context, id uuid.UUID)
 
 func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(route).FirstOrCreate(route).Error
+
+	// Check if route already exists using the unique constraint fields
+	var existingRoute models.ShipmentRoute
+	err := db.WithContext(ctx).Where("shipment_id = ? AND location_id = ? AND route_type = ?",
+		route.ShipmentID, route.LocationID, route.RouteType).First(&existingRoute).Error
+
+	if err == nil {
+		// Route already exists, update it with new data
+		existingRoute.Date = route.Date
+		existingRoute.Actual = route.Actual
+		existingRoute.PredictiveETA = route.PredictiveETA
+		err = db.WithContext(ctx).Save(&existingRoute).Error
+		if err != nil {
+			return nil, fmt.Errorf("failed to update existing route: %w", err)
+		}
+		return &existingRoute, nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		// Some other error occurred
+		return nil, fmt.Errorf("failed to check for existing route: %w", err)
+	}
+
+	// Route doesn't exist, create new one
+	err = db.WithContext(ctx).Create(route).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create route: %w", err)
 	}
 	return route, nil
 }
 
 func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.UUID, vessel *models.Vessel) (*models.Vessel, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(vessel).FirstOrCreate(vessel).Error
+
+	// Try to find existing vessel by IMO
+	var existingVessel models.Vessel
+	err := db.WithContext(ctx).Where("imo = ?", vessel.Imo).First(&existingVessel).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Vessel doesn't exist, create new one
+			err = db.WithContext(ctx).Create(vessel).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Vessel exists, update it with fresh data
+		existingVessel.Name = vessel.Name
+		existingVessel.Mmsi = vessel.Mmsi
+		existingVessel.CallSign = vessel.CallSign
+		existingVessel.Flag = vessel.Flag
+
+		err = db.WithContext(ctx).Save(&existingVessel).Error
+		if err != nil {
+			return nil, err
+		}
+		*vessel = existingVessel // Update the passed vessel with the existing ID
 	}
 
 	if shipmentID != nil {
@@ -303,9 +395,35 @@ func (r *shipmentRepository) FindVesselByID(ctx context.Context, id *uuid.UUID) 
 
 func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(facility).FirstOrCreate(facility).Error
+
+	// Try to find existing facility by name
+	var existingFacility models.Facility
+	err := db.WithContext(ctx).Where("name = ?", facility.Name).First(&existingFacility).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Facility doesn't exist, create new one
+			err = db.WithContext(ctx).Create(facility).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Facility exists, update it with fresh data
+		existingFacility.CountryCode = facility.CountryCode
+		existingFacility.Locode = facility.Locode
+		existingFacility.BicCode = facility.BicCode
+		existingFacility.SmdgCode = facility.SmdgCode
+		existingFacility.Latitude = facility.Latitude
+		existingFacility.Longitude = facility.Longitude
+
+		err = db.WithContext(ctx).Save(&existingFacility).Error
+		if err != nil {
+			return nil, err
+		}
+		*facility = existingFacility // Update the passed facility with the existing ID
 	}
 
 	if shipmentID != nil {
@@ -345,9 +463,32 @@ func (r *shipmentRepository) FindFacilityByID(ctx context.Context, id *uuid.UUID
 
 func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(container).FirstOrCreate(container).Error
+
+	// Try to find existing container by number
+	var existingContainer models.Container
+	err := db.WithContext(ctx).Where("number = ?", container.Number).First(&existingContainer).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Container doesn't exist, create new one
+			err = db.WithContext(ctx).Create(container).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Container exists, update it with fresh data
+		existingContainer.IsoCode = container.IsoCode
+		existingContainer.SizeType = container.SizeType
+		existingContainer.Status = container.Status
+
+		err = db.WithContext(ctx).Save(&existingContainer).Error
+		if err != nil {
+			return nil, err
+		}
+		*container = existingContainer // Update the passed container with the existing ID
 	}
 
 	if shipmentID != nil {
@@ -464,10 +605,18 @@ func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID 
 	return &aisResponse, nil
 }
 
-func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
-	shipment, err := r.GetShipmentByID(ctx, shipmentID)
+func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
+	shipment, err := r.GetShipmentByID(ctx, userID, shipmentID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Get user-specific shipment info
+	var userShipment models.UserShipment
+	if err := r.db.DB.WithContext(ctx).
+		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
+		First(&userShipment).Error; err != nil {
+		return nil, fmt.Errorf("failed to get user shipment info: %w", err)
 	}
 
 	locations, err := r.getShipmentLocations(ctx, shipmentID)
@@ -509,6 +658,9 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, shipmentID 
 		ShippingStatus: shipment.ShippingStatus,
 		CreatedAt:      shipment.CreatedAt,
 		UpdatedAt:      shipment.UpdatedAt,
+		Recipient:      userShipment.Recipient,
+		Address:        userShipment.Address,
+		Notes:          userShipment.Notes,
 		Locations:      locations,
 		Route:          route,
 		Vessels:        vessels,
@@ -846,8 +998,8 @@ func (r *shipmentRepository) convertFacilityToDTO(facility models.Facility) dto.
 		Locode:      facility.Locode,
 		BicCode:     facility.BicCode,
 		SmdgCode:    facility.SmdgCode,
-		Latitude:    facility.Latitude,
-		Longitude:   facility.Longitude,
+		Latitude:    *facility.Latitude,
+		Longitude:   *facility.Longitude,
 	}
 }
 
@@ -1157,4 +1309,108 @@ func (r *shipmentRepository) GetShipmentDataSummary(ctx context.Context, shipmen
 	}
 
 	return summary, nil
+}
+
+func (r *shipmentRepository) GetShipmentsForGrid(ctx context.Context, userID uuid.UUID) ([]models.Shipment, error) {
+	db := r.db.DB.WithContext(ctx)
+
+	query := db.Model(&models.Shipment{}).
+		Joins("JOIN user_shipments us ON us.shipment_id = shipments.id").
+		Where("us.user_id = ?", userID)
+
+	var shipments []models.Shipment
+	if err := query.Find(&shipments).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch shipments: %w", err)
+	}
+
+	return shipments, nil
+}
+
+func (r *shipmentRepository) UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+	db := r.db.DB.WithContext(ctx)
+
+	result := db.Model(&models.UserShipment{}).
+		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
+		Updates(map[string]interface{}{
+			"recipient": recipient,
+			"address":   address,
+			"notes":     notes,
+		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user shipment info: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user shipment relationship not found")
+	}
+
+	return nil
+}
+
+func (r *shipmentRepository) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {
+	db := r.getDBFromContext(ctx)
+
+	result := db.WithContext(ctx).
+		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
+		Delete(&models.UserShipment{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete user shipment: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("shipment not found")
+	}
+
+	return nil
+}
+
+func (r *shipmentRepository) BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error {
+	if len(shipmentIDs) == 0 {
+		return fmt.Errorf("no shipment IDs provided")
+	}
+
+	db := r.getDBFromContext(ctx)
+
+	result := db.WithContext(ctx).
+		Where("user_id = ? AND shipment_id IN ?", userID, shipmentIDs).
+		Delete(&models.UserShipment{})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to bulk delete user shipments: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no shipments found to delete")
+	}
+
+	return nil
+}
+
+// ShipmentForRefresh represents a shipment for background processing
+type ShipmentForRefresh struct {
+	models.Shipment
+}
+
+// GetAllShipmentsForRefresh gets all shipments that need refreshing for background processing
+func (r *shipmentRepository) GetAllShipmentsForRefresh(ctx context.Context, skipRecentlyUpdated time.Duration) ([]ShipmentForRefresh, error) {
+	db := r.getDBFromContext(ctx)
+
+	var results []ShipmentForRefresh
+
+	query := db.Table("shipments").
+		Where("shipping_status != ?", "DELIVERED")
+
+	// Skip recently updated shipments if configured
+	if skipRecentlyUpdated > 0 {
+		cutoffTime := time.Now().Add(-skipRecentlyUpdated)
+		query = query.Where("updated_at < ?", cutoffTime)
+	}
+
+	if err := query.Find(&results).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch shipments for refresh: %w", err)
+	}
+
+	return results, nil
 }

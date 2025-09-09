@@ -9,13 +9,13 @@ import (
 
 type Facility struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Name        string    `gorm:"type:varchar(50);not null;uniqueIndex:idx_facilities_name"`
+	Name        string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_facilities_name"`
 	CountryCode string    `gorm:"type:varchar(10);not null"`
 	Locode      string    `gorm:"type:varchar(50)"`
 	BicCode     *string   `gorm:"type:varchar(50)"`
 	SmdgCode    *string   `gorm:"type:varchar(50)"`
-	Latitude    float64   `gorm:"type:decimal(10,8)"`
-	Longitude   float64   `gorm:"type:decimal(11,8)"`
+	Latitude    *float64  `gorm:"type:decimal(10,8)"`
+	Longitude   *float64  `gorm:"type:decimal(11,8)"`
 	CreatedAt   time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	UpdatedAt   time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 }

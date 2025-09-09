@@ -1,13 +1,15 @@
 package views
 
 templ LoginPage() {
+	@LoginPageWithError("")
+}
+
+templ LoginPageWithError(errorMessage string) {
 	@Base("Login") {
 		<h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
 		<form
-			hx-post="/login"
-			hx-trigger="submit"
-			hx-target-error="#error-container"
-			hx-swap="innerHTML"
+			method="POST"
+			action="/login"
 			class="space-y-4"
 		>
 			<div>
@@ -30,7 +32,11 @@ templ LoginPage() {
 					class="mt-1 p-2 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 				/>
 			</div>
-			<div id="error-container" class="text-red-500 text-sm"></div>
+			if errorMessage != "" {
+				<div class="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-md border border-red-200 dark:border-red-800">
+					{ errorMessage }
+				</div>
+			}
 			<button
 				type="submit"
 				class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition"
@@ -39,7 +45,7 @@ templ LoginPage() {
 			</button>
 		</form>
 		<p class="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">
-			Don’t have an account? <a href="/register" class="text-blue-600 dark:text-blue-400 hover:underline">Register</a>
+			Don't have an account? <a href="/register" class="text-blue-600 dark:text-blue-400 hover:underline">Register</a>
 		</p>
 	}
 }

@@ -2,7 +2,7 @@ package server
 
 import (
 	"go-starter/internal/modules/auth"
-	"go-starter/internal/modules/dashboard"
+	"go-starter/internal/modules/jobs"
 	"go-starter/internal/modules/shipments"
 	"net/http"
 
@@ -17,7 +17,7 @@ func (s *Server) initRoutes() {
 	})
 
 	auth.RegisterRoutes(s.Echo, api, s.DB)
-	dashboard.RegisterRoutes(s.Echo, api, s.DB)
-	shipments.RegisterRoutes(s.Echo, api, s.DB)
+	shipments.RegisterRoutes(s.Echo, api, s.DB, s.Config)
+	jobs.RegisterRoutes(s.Echo, api, s.DB, s.Config, s.JobScheduler)
 
 }

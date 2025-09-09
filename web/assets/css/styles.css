@@ -1,0 +1,70 @@
+@import "toast.css";
+@import "leaflet.css";
+@import "marker.css";
+
+.ag-theme-alpine {
+    --ag-background-color: rgb(255, 255, 255);
+    --ag-header-background-color: rgb(249, 250, 251);
+    --ag-odd-row-background-color: rgb(249, 250, 251);
+    --ag-border-color: rgb(229, 231, 235);
+}
+.dark .ag-theme-alpine {
+    --ag-background-color: rgb(17, 24, 39);
+    --ag-header-background-color: rgb(31, 41, 55);
+    --ag-odd-row-background-color: rgb(31, 41, 55);
+    --ag-border-color: rgb(55, 65, 81);
+    --ag-foreground-color: rgb(243, 244, 246);
+    --ag-secondary-foreground-color: rgb(156, 163, 175);
+}
+
+/* Profile Dropdown Styles */
+.profile-dropdown {
+    position: relative;
+}
+
+.profile-avatar {
+    transition: all 0.2s ease-in-out;
+}
+
+.profile-avatar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.profile-dropdown-menu {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dark .profile-dropdown-menu {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.profile-dropdown-item {
+    transition: all 0.15s ease-in-out;
+}
+
+.profile-dropdown-item:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: translateX(2px);
+}
+
+.dark .profile-dropdown-item:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Profile badge pulse animation */
+.profile-status-indicator {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}

@@ -6,32 +6,43 @@ import (
 	"go-starter/internal/modules/shipments/handlers"
 	shipmentRespositories "go-starter/internal/modules/shipments/repositories"
 	shipmentServices "go-starter/internal/modules/shipments/services"
+	"go-starter/pkg/config"
 	"go-starter/pkg/db"
-	"os"
+	"go-starter/pkg/ratelimiter"
 
 	"github.com/labstack/echo/v4"
 )
 
-func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database) {
+func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *config.Config) {
 	jwtService := authServices.NewJWTService()
 
-	safeCubeBaseURL := os.Getenv("SAFECUBE_API_BASE_URL")
-	safeCubeAPIKey := os.Getenv("SAFECUBE_API_KEY")
+	// Create rate limiter for SafeCube API
+	rateLimiter := ratelimiter.NewSafeCubeAPIRateLimiter()
 
 	safeCubeAPIService := shipmentServices.NewSafeCubeAPIService(
-		safeCubeBaseURL,
-		safeCubeAPIKey,
+		cfg.SafeCubeAPI.BaseURL,
+		cfg.SafeCubeAPI.APIKey,
+		rateLimiter,
 	)
 	shipmentRepository := shipmentRespositories.NewShipmentRepository(database)
 	shipmentService := shipmentServices.NewShipmentService(shipmentRepository, safeCubeAPIService)
 	shipmentAPIHandler := handlers.NewShipmentAPIHandler(shipmentService, safeCubeAPIService)
 
+	shipmentWEBHandler := handlers.NewShipmentWEBHandler(shipmentService)
+
 	shipmentsAPI := api.Group("/shipments")
 	shipmentsAPI.Use(middlewares.JWTMiddleware(jwtService))
 
 	shipmentsAPI.POST("", shipmentAPIHandler.AddShipment)
+	shipmentsAPI.GET("/grid-data", shipmentAPIHandler.GetShipmentsForGrid)
 	shipmentsAPI.GET("/:id/details", shipmentAPIHandler.GetShipmentDetails)
-	shipmentsAPI.GET("/:id/refresh", shipmentAPIHandler.RefreshShipment)
+	shipmentsAPI.GET("/:id/details-html", shipmentWEBHandler.GetShipmentDetailsHTML)
 	shipmentsAPI.GET("/:id", shipmentAPIHandler.GetShipmentByID)
+	shipmentsAPI.POST("/:id/refresh", shipmentAPIHandler.RefreshShipment)
+	shipmentsAPI.PATCH("/:id/update-info", shipmentAPIHandler.UpdateUserShipmentInfo)
+	shipmentsAPI.DELETE("/:id", shipmentAPIHandler.DeleteUserShipment)
+	shipmentsAPI.DELETE("/bulk-delete", shipmentAPIHandler.BulkDeleteUserShipments)
 
+	e.GET("/shipments", shipmentWEBHandler.ViewShipmentPage, middlewares.WebJWTMiddleware(jwtService))
+	e.GET("/map", shipmentWEBHandler.ViewMapPage, middlewares.WebJWTMiddleware(jwtService))
 }
