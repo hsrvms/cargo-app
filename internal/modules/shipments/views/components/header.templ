@@ -32,8 +32,177 @@ templ Header() {
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
 						</svg>
 					</button>
+					<!-- Profile Dropdown -->
+					<div class="relative profile-dropdown" x-data="{ open: false }">
+						<button
+							@click="open = !open"
+							@click.away="open = false"
+							class="flex items-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 profile-avatar"
+							title="Profile menu"
+						>
+							<div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+								<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+								</svg>
+							</div>
+						</button>
+						<!-- Dropdown Menu -->
+						<div
+							x-show="open"
+							x-transition:enter="transition ease-out duration-100"
+							x-transition:enter-start="transform opacity-0 scale-95"
+							x-transition:enter-end="transform opacity-100 scale-100"
+							x-transition:leave="transition ease-in duration-75"
+							x-transition:leave-start="transform opacity-100 scale-100"
+							x-transition:leave-end="transform opacity-0 scale-95"
+							class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 profile-dropdown-menu"
+						>
+							<div class="py-1">
+								<div class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
+									<div class="font-medium" id="user-email">Loading...</div>
+								</div>
+								<button
+									hx-post="/logout"
+									hx-trigger="click"
+									class="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 profile-dropdown-item"
+								>
+									<svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+									</svg>
+									Logout
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
+		<script>
+			// Load user information for the profile dropdown
+			document.addEventListener('DOMContentLoaded', function() {
+				// Get user info from the auth cookie
+				const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth_token='));
+				if (authCookie) {
+					try {
+						const token = authCookie.split('=')[1];
+						const payload = JSON.parse(atob(token.split('.')[1]));
+						const userEmailEl = document.getElementById('user-email');
+						if (userEmailEl && payload.email) {
+							userEmailEl.textContent = payload.email;
+						}
+					} catch (e) {
+						console.log('Could not decode user info from token');
+					}
+				}
+			});
+		</script>
+	</header>
+}
+
+templ MapHeader() {
+	<header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+		<div class="container mx-auto px-4 py-4">
+			<div class="flex items-center justify-between">
+				<div class="flex items-center space-x-4">
+					<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Shipment Map</h1>
+					<span class="text-sm text-gray-500 dark:text-gray-400">Real-time Vessel Tracking</span>
+				</div>
+				<div class="flex items-center space-x-4">
+					<!-- Connection Status -->
+					<div id="connectionStatus" class="flex items-center text-sm">
+						<span class="connection-indicator disconnected"></span>
+						<span class="status-text text-sm text-blue-600 dark:text-blue-400">Connecting...</span>
+					</div>
+					<!-- Data Status -->
+					<div id="dataStatus" class="text-sm text-gray-600 dark:text-gray-300">
+						<span class="shipment-count">0</span> shipments
+					</div>
+					<!-- Navigation -->
+					<a
+						href="/shipments"
+						class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+					>
+						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+						</svg>
+						Back to Grid
+					</a>
+					<!-- Theme Toggle -->
+					<button
+						@click="theme = theme === 'dark' ? 'light' : 'dark'"
+						class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+						title="Toggle theme"
+					>
+						<svg x-show="theme === 'light'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+						</svg>
+						<svg x-show="theme === 'dark'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+						</svg>
+					</button>
+					<!-- Profile Dropdown -->
+					<div class="relative profile-dropdown" x-data="{ open: false }">
+						<button
+							@click="open = !open"
+							@click.away="open = false"
+							class="flex items-center p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 profile-avatar"
+							title="Profile menu"
+						>
+							<div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+								<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+								</svg>
+							</div>
+						</button>
+						<!-- Dropdown Menu -->
+						<div
+							x-show="open"
+							x-transition:enter="transition ease-out duration-100"
+							x-transition:enter-start="transform opacity-0 scale-95"
+							x-transition:enter-end="transform opacity-100 scale-100"
+							x-transition:leave="transition ease-in duration-75"
+							x-transition:leave-start="transform opacity-100 scale-100"
+							x-transition:leave-end="transform opacity-0 scale-95"
+							class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 profile-dropdown-menu"
+						>
+							<div class="py-1">
+								<div class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
+									<div class="font-medium" id="map-user-email">Loading...</div>
+								</div>
+								<button
+									hx-post="/logout"
+									hx-trigger="click"
+									class="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 profile-dropdown-item"
+								>
+									<svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+									</svg>
+									Logout
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script>
+			// Load user information for the map page profile dropdown
+			document.addEventListener('DOMContentLoaded', function() {
+				// Get user info from the auth cookie
+				const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth_token='));
+				if (authCookie) {
+					try {
+						const token = authCookie.split('=')[1];
+						const payload = JSON.parse(atob(token.split('.')[1]));
+						const userEmailEl = document.getElementById('map-user-email');
+						if (userEmailEl && payload.email) {
+							userEmailEl.textContent = payload.email;
+						}
+					} catch (e) {
+						console.log('Could not decode user info from token');
+					}
+				}
+			});
+		</script>
 	</header>
 }

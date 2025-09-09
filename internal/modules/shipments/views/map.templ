@@ -1,5 +1,7 @@
 package views
 
+import "go-starter/internal/modules/shipments/views/components"
+
 templ MapPage() {
 	<!DOCTYPE html>
 	<html
@@ -24,7 +26,7 @@ templ MapPage() {
 			<style>
 				/* Custom styles for full-screen map */
 				.map-container {
-					height: calc(100vh - 140px);
+					height: calc(100vh - 200px);
 					min-height: 600px;
 				}
 
@@ -73,49 +75,7 @@ templ MapPage() {
 		</head>
 		<body class="min-h-screen bg-gray-50 dark:bg-gray-900">
 			<!-- Header -->
-			<header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-				<div class="container mx-auto px-4 py-4">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center space-x-4">
-							<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Shipment Map</h1>
-							<span class="text-sm text-gray-500 dark:text-gray-400">Real-time Vessel Tracking</span>
-						</div>
-						<div class="flex items-center space-x-4">
-							<!-- Connection Status -->
-							<div id="connectionStatus" class="flex items-center text-sm">
-								<span class="connection-indicator disconnected"></span>
-								<span class="status-text text-sm text-blue-600 dark:text-blue-400">Connecting...</span>
-							</div>
-							<!-- Data Status -->
-							<div id="dataStatus" class="text-sm text-gray-600 dark:text-gray-300">
-								<span class="shipment-count">0</span> shipments
-							</div>
-							<!-- Navigation -->
-							<a
-								href="/shipments"
-								class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-							>
-								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-								</svg>
-								Back to Grid
-							</a>
-							<!-- Theme Toggle -->
-							<button
-								@click="theme = theme === 'dark' ? 'light' : 'dark'"
-								class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-							>
-								<svg x-show="theme === 'light'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-								</svg>
-								<svg x-show="theme === 'dark'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-								</svg>
-							</button>
-						</div>
-					</div>
-				</div>
-			</header>
+			@components.MapHeader()
 			<!-- Main Map Content -->
 			<main class="container mx-auto px-4 py-6">
 				<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">

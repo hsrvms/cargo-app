@@ -46,3 +46,38 @@ func JWTMiddleware(jwtService *services.JWTService) echo.MiddlewareFunc {
 		}
 	}
 }
+
+func WebJWTMiddleware(jwtService *services.JWTService) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			var tokenString string
+
+			authHeader := c.Request().Header.Get("Authorization")
+			if after, ok := strings.CutPrefix(authHeader, "Bearer "); ok {
+				tokenString = after
+			}
+
+			if tokenString == "" {
+				cookie, err := c.Cookie("auth_token")
+
+				if err == nil {
+					tokenString = cookie.Value
+				}
+			}
+
+			if tokenString == "" {
+				return c.Redirect(http.StatusTemporaryRedirect, "/login")
+			}
+
+			claims, err := jwtService.ValidateToken(tokenString)
+			if err != nil {
+				return c.Redirect(http.StatusTemporaryRedirect, "/login")
+			}
+
+			// Set user in context
+			c.Set("user", claims)
+
+			return next(c)
+		}
+	}
+}

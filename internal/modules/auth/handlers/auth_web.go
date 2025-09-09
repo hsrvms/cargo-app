@@ -76,6 +76,41 @@ func (h *AuthWEBHandler) Register(c echo.Context) error {
 	return h.handleAuthSuccess(c, response.Token, http.StatusCreated)
 }
 
+func (h *AuthWEBHandler) Logout(c echo.Context) error {
+	// Clear the auth cookie
+	cookie := &http.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // make it true on https
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   -1, // Delete the cookie
+	}
+	c.SetCookie(cookie)
+
+	// Redirect to login page
+	c.Response().Header().Set("HX-Location", "/login")
+	return c.NoContent(http.StatusOK)
+}
+
+func (h *AuthWEBHandler) GetUserInfo(c echo.Context) (*services.Claims, error) {
+	// Get the auth token from cookie
+	cookie, err := c.Cookie("auth_token")
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a temporary JWT service to validate the token
+	jwtService := services.NewJWTService()
+	claims, err := jwtService.ValidateToken(cookie.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return claims, nil
+}
+
 func (h *AuthWEBHandler) setAuthCokie(c echo.Context, token string) {
 	cookie := &http.Cookie{
 		Name:     "auth_token",
