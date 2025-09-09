@@ -250,7 +250,6 @@ const gridOptions = {
       try {
         filterManager = new FilterManager(event.api);
         window.filterManager = filterManager;
-        console.log("Filter manager initialized on grid ready");
       } catch (error) {
         console.error("Failed to initialize filter manager:", error);
       }

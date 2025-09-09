@@ -6,17 +6,6 @@ class FilterManager {
     this.gridApi = gridApi;
     this.storageKey = "ag-grid-saved-filters";
 
-    // Debug: Log available grid API methods
-    console.log("FilterManager: Grid API object:", gridApi);
-    console.log(
-      "FilterManager: Available methods on gridApi:",
-      Object.getOwnPropertyNames(gridApi),
-    );
-    console.log(
-      "FilterManager: Grid API prototype methods:",
-      Object.getOwnPropertyNames(Object.getPrototypeOf(gridApi)),
-    );
-
     // Check specific methods we need
     const requiredMethods = [
       "getFilterModel",
@@ -28,7 +17,6 @@ class FilterManager {
     ];
     requiredMethods.forEach((method) => {
       const available = typeof gridApi[method] === "function";
-      console.log(`FilterManager: ${method} available: ${available}`);
     });
 
     this.init();
@@ -238,8 +226,6 @@ class FilterManager {
       message += "!";
 
       this.showToast(message, "success");
-
-      console.log("Filter saved:", name, filterState);
     } catch (error) {
       console.error("Error saving filter:", error);
       if (error.name === "QuotaExceededError") {
@@ -296,7 +282,6 @@ class FilterManager {
       }
 
       this.showToast(`Filter "${name}" applied successfully!`, "success");
-      console.log("Filter loaded:", name, filterState);
     } catch (error) {
       console.error("Error loading filter:", error);
       this.showToast("Error loading filter. Please try again.", "error");
@@ -332,7 +317,6 @@ class FilterManager {
       }
 
       this.showToast(`Filter "${name}" deleted successfully!`, "success");
-      console.log("Filter deleted:", name);
     } catch (error) {
       console.error("Error deleting filter:", error);
       this.showToast("Error deleting filter. Please try again.", "error");
@@ -424,8 +408,6 @@ class FilterManager {
       }
     };
     dropdown.addEventListener("change", this.dropdownChangeHandler);
-
-    console.log("Loaded filters to dropdown:", filterNames);
   }
 
   /**
@@ -594,7 +576,6 @@ class FilterManager {
       }
 
       this.showToast(`All ${filterCount} saved filters cleared!`, "success");
-      console.log("All saved filters cleared");
     } catch (error) {
       console.error("Error clearing all saved filters:", error);
       this.showToast(
@@ -646,7 +627,6 @@ class FilterManager {
         `Filter "${originalName}" duplicated as "${trimmedName}"!`,
         "success",
       );
-      console.log("Filter duplicated:", originalName, "->", trimmedName);
     } catch (error) {
       console.error("Error duplicating filter:", error);
       this.showToast("Error duplicating filter. Please try again.", "error");
@@ -866,7 +846,6 @@ class FilterManager {
         `${filterCount} filter${filterCount !== 1 ? "s" : ""} exported successfully!`,
         "success",
       );
-      console.log("Filters exported:", exportData);
     } catch (error) {
       console.error("Error exporting filters:", error);
       this.showToast("Error exporting filters. Please try again.", "error");
@@ -929,11 +908,6 @@ class FilterManager {
         }
 
         this.showToast(`${message}!`, "success");
-        console.log("Filters imported:", {
-          newCount,
-          overwriteCount,
-          importData,
-        });
       } catch (error) {
         console.error("Error importing filters:", error);
         this.showToast(
