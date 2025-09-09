@@ -80,8 +80,8 @@ class FilterManager {
   }
 
   /**
-   * Get current filter state from the grid
-   * @returns {Object} Current filter model
+   * Get current complete grid state including filters, column order, and sorting
+   * @returns {Object} Complete grid state with filters, columns, and sorting
    */
   getCurrentFilterState() {
     if (!this.gridApi) {
@@ -102,7 +102,7 @@ class FilterManager {
           ? this.gridApi.getColumnState()
           : [];
 
-      // Safely get current sorting state (may not be available in all AG Grid versions)
+      // Get current sorting state (may not be available in all AG Grid versions)
       const sortModel =
         typeof this.gridApi.getSortModel === "function"
           ? this.gridApi.getSortModel()
@@ -111,13 +111,23 @@ class FilterManager {
       // Count active filters
       const activeFilters = Object.keys(filterModel || {}).length;
 
+      // Count columns that have been reordered from default
+      const reorderedColumns = columnState.filter(
+        (col, index) => col.colId !== columnState[0].colId || col.sort !== null,
+      ).length;
+
       return {
         filters: filterModel,
         columns: columnState,
         sorting: sortModel,
         timestamp: new Date().toISOString(),
         activeFilterCount: activeFilters,
-        description: this.generateFilterDescription(filterModel),
+        columnChanges: reorderedColumns,
+        description: this.generateFilterDescription(
+          filterModel,
+          columnState,
+          sortModel,
+        ),
       };
     } catch (error) {
       console.error("Error getting current filter state:", error);
@@ -133,9 +143,15 @@ class FilterManager {
     if (!filterName) return;
 
     const currentState = this.getCurrentFilterState();
-    if (Object.keys(currentState.filters || {}).length === 0) {
+    const hasFilters = Object.keys(currentState.filters || {}).length > 0;
+    const hasColumnChanges = (currentState.columns || []).some(
+      (col) => col.sort !== null,
+    );
+    const hasSorting = (currentState.sorting || []).length > 0;
+
+    if (!hasFilters && !hasColumnChanges && !hasSorting) {
       alert(
-        "No filters are currently applied. Please apply some filters before saving.",
+        "No filters, column changes, or sorting are currently applied. Please configure the grid before saving.",
       );
       return;
     }
@@ -213,10 +229,15 @@ class FilterManager {
 
       // Show detailed success message
       const filterCount = filterState.activeFilterCount || 0;
-      this.showToast(
-        `Filter "${name}" saved with ${filterCount} active filter${filterCount !== 1 ? "s" : ""}!`,
-        "success",
-      );
+      const hasColumns = (filterState.columns || []).length > 0;
+      const hasSorting = (filterState.sorting || []).length > 0;
+
+      let message = `"${name}" saved with ${filterCount} filter${filterCount !== 1 ? "s" : ""}`;
+      if (hasColumns) message += ", column layout";
+      if (hasSorting) message += ", sorting";
+      message += "!";
+
+      this.showToast(message, "success");
 
       console.log("Filter saved:", name, filterState);
     } catch (error) {
@@ -255,15 +276,7 @@ class FilterManager {
         this.gridApi.setFilterModel(filterState.filters);
       }
 
-      // Apply sorting if available
-      if (
-        filterState.sorting &&
-        typeof this.gridApi.setSortModel === "function"
-      ) {
-        this.gridApi.setSortModel(filterState.sorting);
-      }
-
-      // Apply column state if available
+      // Apply column state first (includes order, width, visibility)
       if (
         filterState.columns &&
         typeof this.gridApi.applyColumnState === "function"
@@ -272,6 +285,14 @@ class FilterManager {
           state: filterState.columns,
           applyOrder: true,
         });
+      }
+
+      // Apply sorting after columns
+      if (
+        filterState.sorting &&
+        typeof this.gridApi.setSortModel === "function"
+      ) {
+        this.gridApi.setSortModel(filterState.sorting);
       }
 
       this.showToast(`Filter "${name}" applied successfully!`, "success");
@@ -354,7 +375,18 @@ class FilterManager {
       // Create descriptive text
       const filterCount = filterData.activeFilterCount || 0;
       const savedDate = new Date(filterData.savedAt).toLocaleDateString();
-      option.textContent = `${name} (${filterCount} filter${filterCount !== 1 ? "s" : ""} - ${savedDate})`;
+      const hasColumns = (filterData.columns || []).length > 0;
+      const hasSorting = (filterData.sorting || []).length > 0;
+
+      let description = `${filterCount} filter${filterCount !== 1 ? "s" : ""}`;
+      if (hasColumns || hasSorting) {
+        const extras = [];
+        if (hasColumns) extras.push("columns");
+        if (hasSorting) extras.push("sorting");
+        description += ` + ${extras.join(" + ")}`;
+      }
+
+      option.textContent = `${name} (${description} - ${savedDate})`;
 
       // Add tooltip with description if available
       if (filterData.description) {
@@ -485,30 +517,52 @@ class FilterManager {
   }
 
   /**
-   * Generate human-readable description of filter state
+   * Generate human-readable description of complete grid state
    * @param {Object} filterModel - AG Grid filter model
-   * @returns {string} Filter description
+   * @param {Array} columnState - AG Grid column state
+   * @param {Array} sortModel - AG Grid sort model
+   * @returns {string} Complete state description
    */
-  generateFilterDescription(filterModel) {
-    if (!filterModel || Object.keys(filterModel).length === 0) {
-      return "No active filters";
+  generateFilterDescription(filterModel, columnState = [], sortModel = []) {
+    const parts = [];
+
+    // Describe filters
+    if (filterModel && Object.keys(filterModel).length > 0) {
+      const filterDescriptions = [];
+      Object.entries(filterModel).forEach(([column, filter]) => {
+        if (filter.filterType === "text") {
+          filterDescriptions.push(`${column}: "${filter.filter}"`);
+        } else if (filter.filterType === "set") {
+          const values = filter.values || [];
+          filterDescriptions.push(`${column}: ${values.length} selected`);
+        } else if (filter.filterType === "number") {
+          filterDescriptions.push(`${column}: ${filter.type} ${filter.filter}`);
+        } else {
+          filterDescriptions.push(`${column}: filtered`);
+        }
+      });
+      parts.push(`Filters: ${filterDescriptions.join(", ")}`);
     }
 
-    const descriptions = [];
-    Object.entries(filterModel).forEach(([column, filter]) => {
-      if (filter.filterType === "text") {
-        descriptions.push(`${column}: "${filter.filter}"`);
-      } else if (filter.filterType === "set") {
-        const values = filter.values || [];
-        descriptions.push(`${column}: ${values.length} selected`);
-      } else if (filter.filterType === "number") {
-        descriptions.push(`${column}: ${filter.type} ${filter.filter}`);
-      } else {
-        descriptions.push(`${column}: filtered`);
-      }
-    });
+    // Describe sorting
+    if (sortModel && sortModel.length > 0) {
+      const sortDescriptions = sortModel.map(
+        (sort) => `${sort.colId} (${sort.sort})`,
+      );
+      parts.push(`Sorted by: ${sortDescriptions.join(", ")}`);
+    }
 
-    return descriptions.join(", ");
+    // Describe column changes (simplified)
+    if (columnState && columnState.length > 0) {
+      const hiddenCols = columnState.filter((col) => !col.hide).length;
+      if (hiddenCols < columnState.length) {
+        parts.push(
+          `${columnState.length - hiddenCols} of ${columnState.length} columns visible`,
+        );
+      }
+    }
+
+    return parts.length > 0 ? parts.join(" | ") : "No active configuration";
   }
 
   /**
@@ -741,7 +795,7 @@ class FilterManager {
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 ${filterCount} filter${filterCount !== 1 ? "s" : ""} • Saved ${date} at ${time}
               </p>
-              ${filter.description ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${filter.description}</p>` : ""}
+              ${filter.description ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1" title="${filter.description}">${filter.description.length > 80 ? filter.description.substring(0, 77) + "..." : filter.description}</p>` : ""}
             </div>
             <div class="flex space-x-2 ml-4">
               <button

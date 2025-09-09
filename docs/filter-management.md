@@ -1,91 +1,91 @@
-# AG Grid Filter Management System
+# AG Grid State Management System
 
 ## Overview
 
-The Filter Management System provides comprehensive functionality for saving, loading, and managing filter states in the AG Grid shipments view. Users can save frequently used filter combinations, share them with others, and quickly switch between different filtering scenarios.
+The Grid State Management System provides comprehensive functionality for saving, loading, and managing complete grid states in the AG Grid shipments view. Users can save frequently used filter combinations, column layouts, sorting configurations, share them with others, and quickly switch between different grid configurations.
 
 ## Features
 
-### 1. Save Current Filters
+### 1. Save Current Grid State
 - **Button**: "Save Filter" (blue button with save icon)
-- **Description**: Saves the currently applied filters with a custom name
+- **Description**: Saves the current grid state including filters, column order, column widths, sorting, and visibility settings
 - **Usage**: 
-  1. Apply desired filters to the grid
+  1. Configure the grid as desired (apply filters, reorder columns, set sorting, etc.)
   2. Click "Save Filter"
   3. Enter a descriptive name when prompted
-  4. Filter is saved to local storage
+  4. Complete grid state is saved to local storage
 
-### 2. Load Saved Filters
+### 2. Load Saved Grid States
 - **Control**: "Select Saved Filter..." dropdown
-- **Description**: Quickly apply previously saved filter configurations
+- **Description**: Quickly apply previously saved grid configurations including filters, column layout, and sorting
 - **Usage**: 
-  1. Click the dropdown to see available saved filters
-  2. Select a filter to apply it immediately
-  3. The grid will update with the selected filter state
+  1. Click the dropdown to see available saved configurations
+  2. Select a configuration to apply it immediately
+  3. The grid will update with the selected complete state (filters, columns, sorting)
 
 ### 3. Clear All Filters
 - **Button**: "Clear Filters" (gray button with cross icon)
-- **Description**: Removes all active filters from the grid
-- **Usage**: Click the button to reset the grid to show all data
+- **Description**: Removes all active filters from the grid (does not affect column order or sorting)
+- **Usage**: Click the button to clear filters while maintaining column layout and sorting
 
-### 4. Filter Management Panel
+### 4. Grid State Management Panel
 - **Button**: "Manage" (purple button with gear icon)
-- **Description**: Advanced management interface for saved filters
+- **Description**: Advanced management interface for saved grid configurations
 - **Features**:
-  - View all saved filters with details
-  - Apply, duplicate, or delete individual filters
-  - Import/export filter collections
-  - Clear all saved filters
+  - View all saved configurations with details (filters, columns, sorting)
+  - Apply, duplicate, or delete individual configurations
+  - Import/export configuration collections
+  - Clear all saved configurations
 
 ## Filter Management Panel
 
-### Filter List
-Each saved filter displays:
-- **Name**: User-defined filter name
-- **Filter Count**: Number of active filters
-- **Save Date**: When the filter was saved
-- **Description**: Auto-generated description of filter conditions
+### Configuration List
+Each saved configuration displays:
+- **Name**: User-defined configuration name
+- **State Summary**: Number of active filters, column changes, and sorting
+- **Save Date**: When the configuration was saved
+- **Description**: Auto-generated description of filters, sorting, and column changes
 - **Actions**:
-  - **Apply**: Load and apply the filter
-  - **Copy**: Duplicate the filter with a new name
-  - **Delete**: Remove the filter (with confirmation)
+  - **Apply**: Load and apply the complete configuration
+  - **Copy**: Duplicate the configuration with a new name
+  - **Delete**: Remove the configuration (with confirmation)
 
 ### Import/Export Functionality
 
-#### Export Filters
+#### Export Configurations
 - **Button**: "Export Filters"
-- **Function**: Downloads all saved filters as a JSON file
+- **Function**: Downloads all saved grid configurations as a JSON file
 - **File Format**: `ag-grid-filters-YYYY-MM-DD.json`
 - **Use Cases**:
-  - Backup filter configurations
-  - Share filters with team members
-  - Transfer filters between environments
+  - Backup complete grid configurations
+  - Share grid setups with team members
+  - Transfer configurations between environments
 
-#### Import Filters
+#### Import Configurations
 - **Button**: "Import Filters" (file upload)
-- **Function**: Loads filters from a JSON file
+- **Function**: Loads grid configurations from a JSON file
 - **Supported Format**: JSON files exported by this system
 - **Behavior**: 
-  - Merges imported filters with existing ones
-  - Overwrites filters with identical names (with confirmation)
-  - Shows summary of imported filters
+  - Merges imported configurations with existing ones
+  - Overwrites configurations with identical names (with confirmation)
+  - Shows summary of imported configurations
 
 ### Danger Zone
-- **Clear All Saved Filters**: Permanently deletes all saved filters (with confirmation)
+- **Clear All Saved Filters**: Permanently deletes all saved configurations (with confirmation)
 
 ## Technical Details
 
 ### Storage
 - **Method**: Browser localStorage
 - **Key**: `ag-grid-saved-filters`
-- **Format**: JSON object with filter names as keys
+- **Format**: JSON object with configuration names as keys
 
-### Filter State Components
-Each saved filter includes:
-- **Filters**: AG Grid filter model (column filters)
-- **Columns**: Column state (width, order, visibility)
-- **Sorting**: Sort model (column sorting state)
-- **Metadata**: Save date, filter count, description, version
+### Grid State Components
+Each saved configuration includes:
+- **Filters**: AG Grid filter model (all column filters)
+- **Columns**: Complete column state (width, order, visibility, pinning)
+- **Sorting**: Sort model (multi-column sorting state)
+- **Metadata**: Save date, filter count, column changes, description, version
 
 ### Browser Compatibility
 - Requires localStorage support
@@ -93,43 +93,44 @@ Each saved filter includes:
 
 ## Usage Examples
 
-### Example 1: Save "In Transit Shipments" Filter
-1. Apply filters:
-   - Status: "In Transit"
-   - Next ETA: Last 7 days
+### Example 1: Save "In Transit Dashboard" Configuration
+1. Configure the grid:
+   - Filters: Status: "In Transit", Next ETA: Last 7 days
+   - Column order: Move "Status" and "Next ETA" to front
+   - Sorting: Sort by "Next ETA" ascending
 2. Click "Save Filter"
-3. Enter name: "In Transit This Week"
-4. Filter is saved and appears in dropdown
+3. Enter name: "In Transit Dashboard"
+4. Complete configuration is saved and appears in dropdown
 
-### Example 2: Team Filter Sharing
-1. Team member creates useful filter combinations
-2. Exports filters using "Export Filters" button
+### Example 2: Team Configuration Sharing
+1. Team member creates useful grid configurations (filters, columns, sorting)
+2. Exports configurations using "Export Filters" button
 3. Shares the JSON file with team
 4. Other team members import using "Import Filters"
-5. Everyone has access to the same filter presets
+5. Everyone has access to the same grid layouts and filter presets
 
-### Example 3: Quick Status Filtering
-1. Save common status combinations:
-   - "Active Shipments" (In Transit + Planned)
-   - "Completed Shipments" (Delivered)
-   - "Problem Shipments" (custom criteria)
-2. Use dropdown to quickly switch between views
+### Example 3: Role-Based Grid Views
+1. Save role-specific grid configurations:
+   - "Manager View" (All columns, sorted by priority, filtered for exceptions)
+   - "Operator View" (Essential columns only, sorted by ETA)
+   - "Customer Service" (Customer-facing columns, filtered by active shipments)
+2. Use dropdown to quickly switch between complete role-based layouts
 
 ## Keyboard Shortcuts
 
 Currently not implemented, but could be added:
-- `Ctrl+S`: Save current filter
-- `Ctrl+Shift+S`: Open filter management panel
-- `Escape`: Close filter management panel
+- `Ctrl+S`: Save current grid configuration
+- `Ctrl+Shift+S`: Open configuration management panel
+- `Escape`: Close configuration management panel
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Filter Not Saving
-- **Cause**: No active filters applied
-- **Solution**: Apply at least one filter before saving
-- **Error Message**: "No filters are currently applied. Please apply some filters before saving."
+#### Configuration Not Saving
+- **Cause**: No changes made to grid (no filters, column changes, or sorting)
+- **Solution**: Apply filters, reorder columns, or set sorting before saving
+- **Error Message**: "No filters, column changes, or sorting are currently applied. Please configure the grid before saving."
 
 #### Storage Quota Exceeded
 - **Cause**: Too many saved filters (localStorage limit ~5-10MB)
@@ -232,20 +233,21 @@ filterManager.importFilters(jsonString);
 const stats = filterManager.getFilterStats();
 ```
 
-### Filter State Structure
+### Grid State Structure
 
 ```javascript
 {
-  "filterName": {
+  "configurationName": {
     "filters": {}, // AG Grid filter model
-    "columns": [], // Column state array
-    "sorting": [], // Sort model array
+    "columns": [], // Complete column state array (order, width, visibility)
+    "sorting": [], // Sort model array (multi-column sorting)
     "timestamp": "2024-01-01T00:00:00.000Z",
     "savedAt": "2024-01-01T00:00:00.000Z",
     "activeFilterCount": 3,
-    "description": "status: 2 selected, recipient: contains text",
+    "columnChanges": 2,
+    "description": "Filters: status: 2 selected | Sorted by: nextETA (asc) | 8 of 10 columns visible",
     "version": "1.0",
-    "name": "filterName"
+    "name": "configurationName"
   }
 }
 ```
