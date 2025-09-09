@@ -1,9 +1,11 @@
 import { actionCellRenderer } from "./action-cell-renderer.js";
 import { deleteSelectedBtnEvent } from "./ag-grid-toolbar.js";
 import { mapDataService } from "/scripts/map/map-data-service.js";
+import { FilterManager } from "./filter-manager.js";
 // Map integration now handled by enhanced map service
 
 let gridApi;
+let filterManager;
 
 const rowSelection = {
   mode: "multiRow",
@@ -58,6 +60,7 @@ const columnDefs = [
     field: "originPort",
     headerName: "Origin",
     width: 200,
+    filter: "agTextColumnFilter",
     cellRenderer: (params) => {
       const pol = params.data?.route?.pol;
       if (pol && pol.location) {
@@ -70,6 +73,7 @@ const columnDefs = [
     field: "destinationPort",
     headerName: "Destination",
     width: 200,
+    filter: "agTextColumnFilter",
     cellRenderer: (params) => {
       const pod = params.data?.route?.pod;
       if (pod && pod.location) {
@@ -82,6 +86,7 @@ const columnDefs = [
     field: "vesselInfo",
     headerName: "Vessel",
     maxWidth: 180,
+    filter: "agSetColumnFilter",
     cellRenderer: (params) => {
       const vessels = params.data?.vessels;
       if (vessels && vessels.length > 0) {
@@ -107,6 +112,7 @@ const columnDefs = [
     field: "nextETA",
     headerName: "Next ETA",
     width: 120,
+    filter: "agDateColumnFilter",
     cellRenderer: (params) => {
       const route = params.data?.route;
       if (!route) return "N/A";
@@ -134,6 +140,7 @@ const columnDefs = [
     field: "recipient",
     headerName: "Recipient",
     width: 150,
+    filter: "agTextColumnFilter",
     editable: true,
     cellEditor: "agTextCellEditor",
     tooltipField: "recipient",
@@ -154,6 +161,7 @@ const columnDefs = [
     field: "address",
     headerName: "Address",
     width: 200,
+    filter: "agTextColumnFilter",
     editable: true,
     cellEditor: "agTextCellEditor",
     tooltipField: "address",
@@ -174,6 +182,7 @@ const columnDefs = [
     field: "notes",
     headerName: "Notes",
     width: 200,
+    filter: "agTextColumnFilter",
     editable: true,
     cellEditor: "agLargeTextCellEditor",
     cellEditorParams: {
@@ -235,6 +244,17 @@ const gridOptions = {
     event.api.setFilterModel({
       shippingStatus: { values: ["IN_TRANSIT", "UNKNOWN", "PLANNED"] },
     });
+
+    // Initialize filter manager after grid is ready
+    if (!filterManager) {
+      try {
+        filterManager = new FilterManager(event.api);
+        window.filterManager = filterManager;
+        console.log("Filter manager initialized on grid ready");
+      } catch (error) {
+        console.error("Failed to initialize filter manager:", error);
+      }
+    }
   },
 
   onSelectionChanged: (event) => {
@@ -265,6 +285,36 @@ export function handleToolbar(gridApi) {
     console.log("Refreshing grid data and updating map...");
     loadShipments(gridApi);
   });
+
+  // Filter manager is now initialized in onGridReady callback
+  // This ensures the grid API is fully ready with all methods available
+}
+
+// Export filter manager for external access
+export function getFilterManager() {
+  return filterManager;
+}
+
+// Initialize filter manager manually if needed
+export function initializeFilterManager(gridApi) {
+  if (!gridApi) {
+    console.error("Grid API required for filter manager initialization");
+    return null;
+  }
+
+  if (!filterManager) {
+    try {
+      filterManager = new FilterManager(gridApi);
+      window.filterManager = filterManager;
+      console.log("Filter manager manually initialized");
+      return filterManager;
+    } catch (error) {
+      console.error("Failed to manually initialize filter manager:", error);
+      return null;
+    }
+  }
+
+  return filterManager;
 }
 
 export function loadShipments(gridApi) {
