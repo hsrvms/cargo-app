@@ -5,6 +5,7 @@ import (
 	"go-starter/internal/modules/auth/services"
 	"go-starter/internal/modules/auth/views"
 	"go-starter/internal/modules/auth/views/errors"
+	"log"
 	"net/http"
 
 	"strings"
@@ -108,6 +109,28 @@ func (h *AuthWEBHandler) GetUserInfo(c echo.Context) (*services.Claims, error) {
 	}
 
 	return claims, nil
+}
+
+func (h *AuthWEBHandler) HandleRoot(c echo.Context) error {
+	log.Println("Root route accessed, checking authentication...")
+
+	// Check if user is already authenticated
+	cookie, err := c.Cookie("auth_token")
+	if err != nil {
+		log.Println("No auth token found → redirecting to login")
+		return c.Redirect(http.StatusSeeOther, "/login")
+	}
+
+	// Validate the token
+	jwtService := services.NewJWTService()
+	claims, err := jwtService.ValidateToken(cookie.Value)
+	if err != nil {
+		log.Printf("Invalid auth token → redirecting to login: %v", err)
+		return c.Redirect(http.StatusSeeOther, "/login")
+	}
+
+	log.Printf("User %s authenticated → redirecting to shipments", claims.Email)
+	return c.Redirect(http.StatusSeeOther, "/shipments")
 }
 
 func (h *AuthWEBHandler) setAuthCokie(c echo.Context, token string) {

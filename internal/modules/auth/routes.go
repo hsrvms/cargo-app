@@ -23,6 +23,7 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database) {
 	e.GET("/register", authWEBHandler.ViewRegister)
 	e.POST("/register", authWEBHandler.Register)
 	e.POST("/logout", authWEBHandler.Logout)
+	e.GET("/", authWEBHandler.HandleRoot)
 
 	authGroup := api.Group("/auth")
 	authGroup.POST("/register", authAPIHandler.Register)
