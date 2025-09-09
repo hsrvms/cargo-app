@@ -551,6 +551,51 @@ export function drawShipmentRoutes(shipments) {
   });
 }
 
+// Helper function to handle International Date Line crossings
+function splitRouteAtDateLine(coordinates) {
+  if (coordinates.length < 2) return [coordinates];
+
+  const segments = [];
+  let currentSegment = [coordinates[0]];
+  let dateLineCrossings = 0;
+
+  for (let i = 1; i < coordinates.length; i++) {
+    const prevLng = coordinates[i - 1][1];
+    const currLng = coordinates[i][1];
+    const lngDiff = Math.abs(currLng - prevLng);
+
+    // If the longitude difference is greater than 180, we're crossing the date line
+    if (lngDiff > 180) {
+      dateLineCrossings++;
+      console.log(
+        `🌍 Date line crossing detected: ${prevLng.toFixed(2)}° → ${currLng.toFixed(2)}° (diff: ${lngDiff.toFixed(2)}°)`,
+      );
+      // Finish current segment
+      segments.push(currentSegment);
+      // Start new segment with current point
+      currentSegment = [coordinates[i]];
+    } else {
+      // Normal case - add point to current segment
+      currentSegment.push(coordinates[i]);
+    }
+  }
+
+  // Add the last segment if it has points
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+
+  const filteredSegments = segments.filter((segment) => segment.length >= 2);
+
+  if (dateLineCrossings > 0) {
+    console.log(
+      `🗺️ Route split into ${filteredSegments.length} segments due to ${dateLineCrossings} date line crossing(s)`,
+    );
+  }
+
+  return filteredSegments;
+}
+
 function drawShipmentRoutesForShipment(map, shipment) {
   const shipmentRoutes = [];
 
@@ -633,44 +678,49 @@ function drawShipmentRoutesForShipment(map, shipment) {
       routeStyle.dashArray = "2, 4"; // Smaller dots with less spacing for land routes
     }
 
-    // Create polyline with enhanced styling
-    const polyline = L.polyline(validLatLngs, routeStyle).addTo(routeGroup);
+    // Split route at date line crossings to avoid straight lines across the world
+    const routeSegments = splitRouteAtDateLine(validLatLngs);
 
-    // Add hover effects optimized for thin dotted lines
-    polyline.on("mouseover", function (e) {
-      this.setStyle({
-        weight: Math.min(routeWeight + 1, 4), // More subtle weight increase for thin lines
-        opacity: 0.9, // Slightly less intense opacity change
-        color: routeType === "SEA" ? "#0891b2" : "#059669", // Slightly darker color on hover
+    // Create polylines for each segment
+    routeSegments.forEach((segmentCoords, segmentIdx) => {
+      const polyline = L.polyline(segmentCoords, routeStyle).addTo(routeGroup);
+
+      // Add hover effects optimized for thin dotted lines
+      polyline.on("mouseover", function (e) {
+        this.setStyle({
+          weight: Math.min(routeWeight + 1, 4), // More subtle weight increase for thin lines
+          opacity: 0.9, // Slightly less intense opacity change
+          color: routeType === "SEA" ? "#0891b2" : "#059669", // Slightly darker color on hover
+        });
+        this.bringToFront();
       });
-      this.bringToFront();
-    });
 
-    polyline.on("mouseout", function (e) {
-      this.setStyle({
-        weight: routeWeight,
-        opacity: routeType === "SEA" ? 0.7 : 0.6,
-        color: color, // Reset to original color
+      polyline.on("mouseout", function (e) {
+        this.setStyle({
+          weight: routeWeight,
+          opacity: routeType === "SEA" ? 0.7 : 0.6,
+          color: color, // Reset to original color
+        });
       });
+
+      // Add popup to route segment with enhanced information
+      const popupContent = createRoutePopupContent(
+        shipment,
+        routeType,
+        index,
+        sortedSegments,
+        validLatLngs,
+        color,
+      );
+      polyline.bindPopup(popupContent);
+
+      // Store route metadata
+      polyline._shipmentId = shipment.id;
+      polyline._routeType = routeType;
+      polyline._segmentIndex = index;
+
+      shipmentRoutes.push(polyline);
     });
-
-    // Add popup to route segment with enhanced information
-    const popupContent = createRoutePopupContent(
-      shipment,
-      routeType,
-      index,
-      sortedSegments,
-      validLatLngs,
-      color,
-    );
-    polyline.bindPopup(popupContent);
-
-    // Store route metadata
-    polyline._shipmentId = shipment.id;
-    polyline._routeType = routeType;
-    polyline._segmentIndex = index;
-
-    shipmentRoutes.push(polyline);
   });
 
   return shipmentRoutes;
