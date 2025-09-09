@@ -23,6 +23,33 @@ templ MapPage() {
 			<script src="/assets/js/htmx-ext-response-targets.js" defer></script>
 			<script src="/assets/js/leaflet.js"></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+			<script>
+				// Global HTMX redirect handling for proper page reloads
+				document.addEventListener('DOMContentLoaded', function() {
+					// Handle redirects from HTMX responses with full page reload
+					document.body.addEventListener('htmx:responseError', function(evt) {
+						// Check if it's actually a redirect (3xx status)
+						if (evt.detail.xhr.status >= 300 && evt.detail.xhr.status < 400) {
+							const location = evt.detail.xhr.getResponseHeader('Location');
+							if (location) {
+								window.location.href = location;
+								return;
+							}
+						}
+					});
+
+					document.body.addEventListener('htmx:afterRequest', function(evt) {
+						// Handle successful redirects
+						if (evt.detail.xhr.status >= 300 && evt.detail.xhr.status < 400) {
+							const location = evt.detail.xhr.getResponseHeader('Location');
+							if (location) {
+								window.location.href = location;
+								return;
+							}
+						}
+					});
+				});
+			</script>
 			<style>
 				/* Custom styles for full-screen map */
 				.map-container {

@@ -55,22 +55,23 @@ templ Header() {
 							x-transition:leave="transition ease-in duration-75"
 							x-transition:leave-start="transform opacity-100 scale-100"
 							x-transition:leave-end="transform opacity-0 scale-95"
-							class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 profile-dropdown-menu"
+							class="absolute right-0 z-[1000] mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 profile-dropdown-menu"
 						>
 							<div class="py-1">
 								<div class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
 									<div class="font-medium" id="user-email">Loading...</div>
 								</div>
-								<button
-									hx-post="/logout"
-									hx-trigger="click"
-									class="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 profile-dropdown-item"
-								>
-									<svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-									</svg>
-									Logout
-								</button>
+								<form method="POST" action="/logout" class="w-full">
+									<button
+										type="submit"
+										class="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 profile-dropdown-item"
+									>
+										<svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+										</svg>
+										Logout
+									</button>
+								</form>
 							</div>
 						</div>
 					</div>
@@ -163,22 +164,23 @@ templ MapHeader() {
 							x-transition:leave="transition ease-in duration-75"
 							x-transition:leave-start="transform opacity-100 scale-100"
 							x-transition:leave-end="transform opacity-0 scale-95"
-							class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 profile-dropdown-menu"
+							class="absolute right-0 z-[1000] mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 profile-dropdown-menu"
 						>
 							<div class="py-1">
 								<div class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
 									<div class="font-medium" id="map-user-email">Loading...</div>
 								</div>
-								<button
-									hx-post="/logout"
-									hx-trigger="click"
-									class="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 profile-dropdown-item"
-								>
-									<svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-									</svg>
-									Logout
-								</button>
+								<form method="POST" action="/logout" class="w-full">
+									<button
+										type="submit"
+										class="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 profile-dropdown-item"
+									>
+										<svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+										</svg>
+										Logout
+									</button>
+								</form>
 							</div>
 						</div>
 					</div>

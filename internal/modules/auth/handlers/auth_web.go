@@ -43,13 +43,13 @@ func (h *AuthWEBHandler) Login(c echo.Context) error {
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return h.renderError(c, http.StatusBadRequest, "Invalid email or password")
+		return h.renderLoginWithError(c, http.StatusBadRequest, "Invalid email or password")
 	}
 
 	response, err := h.authService.Login(c.Request().Context(), &req)
 	if err != nil {
 		statusCode, message := h.categorizeAuthError(err)
-		return h.renderError(c, statusCode, message)
+		return h.renderLoginWithError(c, statusCode, message)
 	}
 
 	return h.handleAuthSuccess(c, response.Token, http.StatusOK)
@@ -64,13 +64,13 @@ func (h *AuthWEBHandler) Register(c echo.Context) error {
 	}
 
 	if err := h.validator.Struct(req); err != nil {
-		return h.renderError(c, http.StatusBadRequest, "Invalid email or password")
+		return h.renderRegisterWithError(c, http.StatusBadRequest, "Invalid email or password")
 	}
 
 	response, err := h.authService.Register(c.Request().Context(), &req)
 	if err != nil {
 		statusCode, message := h.categorizeAuthError(err)
-		return h.renderError(c, statusCode, message)
+		return h.renderRegisterWithError(c, statusCode, message)
 	}
 
 	return h.handleAuthSuccess(c, response.Token, http.StatusCreated)
@@ -89,9 +89,8 @@ func (h *AuthWEBHandler) Logout(c echo.Context) error {
 	}
 	c.SetCookie(cookie)
 
-	// Redirect to login page
-	c.Response().Header().Set("HX-Location", "/login")
-	return c.NoContent(http.StatusOK)
+	// Redirect to login page with full page reload
+	return c.Redirect(http.StatusSeeOther, "/login")
 }
 
 func (h *AuthWEBHandler) GetUserInfo(c echo.Context) (*services.Claims, error) {
@@ -130,10 +129,24 @@ func (h *AuthWEBHandler) renderError(c echo.Context, statusCode int, message str
 	return errors.AuthError(message).Render(c.Request().Context(), c.Response().Writer)
 }
 
+func (h *AuthWEBHandler) renderLoginWithError(c echo.Context, statusCode int, message string) error {
+	c.Response().Header().Set("Content-Type", "text/html")
+	c.Response().WriteHeader(statusCode)
+	component := views.LoginPageWithError(message)
+	return component.Render(c.Request().Context(), c.Response().Writer)
+}
+
+func (h *AuthWEBHandler) renderRegisterWithError(c echo.Context, statusCode int, message string) error {
+	c.Response().Header().Set("Content-Type", "text/html")
+	c.Response().WriteHeader(statusCode)
+	component := views.RegisterPageWithError(message)
+	return component.Render(c.Request().Context(), c.Response().Writer)
+}
+
 func (h *AuthWEBHandler) handleAuthSuccess(c echo.Context, token string, statusCode int) error {
 	h.setAuthCokie(c, token)
-	c.Response().Header().Set("HX-Location", "/shipments")
-	return c.NoContent(statusCode)
+	// Use proper HTTP redirect for full page reload to ensure CSS loads correctly
+	return c.Redirect(http.StatusSeeOther, "/shipments")
 }
 
 func (h *AuthWEBHandler) categorizeAuthError(err error) (int, string) {
