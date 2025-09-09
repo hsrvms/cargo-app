@@ -277,6 +277,41 @@ func (h *shipmentAPIHandler) DeleteUserShipment(c echo.Context) error {
 	})
 }
 
+func (h *shipmentAPIHandler) UpdateUserShipmentInfo(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	userID, err := authService.GetUserIDFromContext(c)
+	if err != nil {
+		return c.Redirect(http.StatusTemporaryRedirect, "/login")
+	}
+
+	idStr := c.Param("id")
+	shipmentID, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid shipment id",
+		})
+	}
+
+	var req dto.UpdateUserShipmentInfoRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body",
+		})
+	}
+
+	err = h.shipmentService.UpdateUserShipmentInfo(ctx, userID, shipmentID, req.Recipient, req.Address, req.Notes)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "success",
+	})
+}
+
 func (h *shipmentAPIHandler) BulkDeleteUserShipments(c echo.Context) error {
 	ctx := c.Request().Context()
 

@@ -39,6 +39,7 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	shipmentsAPI.GET("/:id/details-html", shipmentWEBHandler.GetShipmentDetailsHTML)
 	shipmentsAPI.GET("/:id", shipmentAPIHandler.GetShipmentByID)
 	shipmentsAPI.POST("/:id/refresh", shipmentAPIHandler.RefreshShipment)
+	shipmentsAPI.PATCH("/:id/update-info", shipmentAPIHandler.UpdateUserShipmentInfo)
 	shipmentsAPI.DELETE("/:id", shipmentAPIHandler.DeleteUserShipment)
 	shipmentsAPI.DELETE("/bulk-delete", shipmentAPIHandler.BulkDeleteUserShipments)
 

@@ -130,6 +130,49 @@ const columnDefs = [
     },
   },
   {
+    field: "recipient",
+    headerName: "Recipient",
+    width: 150,
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    cellRenderer: (params) => {
+      return params.value || "";
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "recipient", params.newValue || "");
+    },
+  },
+  {
+    field: "address",
+    headerName: "Address",
+    width: 200,
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    cellRenderer: (params) => {
+      return params.value || "";
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "address", params.newValue || "");
+    },
+  },
+  {
+    field: "notes",
+    headerName: "Notes",
+    width: 200,
+    editable: true,
+    cellEditor: "agLargeTextCellEditor",
+    cellEditorParams: {
+      maxLength: 500,
+      rows: 3,
+    },
+    cellRenderer: (params) => {
+      return params.value || "";
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "notes", params.newValue || "");
+    },
+  },
+  {
     field: "actions",
     headerName: "Actions",
     width: 100,
@@ -209,5 +252,49 @@ export function loadShipments(gridApi) {
     })
     .catch((error) => {
       console.error("Error fetching data:", error);
+    });
+}
+
+// Function to update shipment fields
+function updateShipmentField(shipmentId, field, value) {
+  if (!shipmentId) {
+    console.error("Invalid shipment ID");
+    return;
+  }
+
+  const payload = {};
+  payload[field] = value || "";
+
+  fetch(`/api/shipments/${shipmentId}/update-info`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (data.error) {
+        console.error("Error updating field:", data.error);
+        // You could add toast notification here if available
+        // showToast("Error: " + data.error, "error");
+      } else {
+        console.log(`Successfully updated ${field} for shipment ${shipmentId}`);
+        // You could add success toast notification here if available
+        // showToast(`${field} updated successfully`, "success");
+      }
+    })
+    .catch((error) => {
+      console.error("Error updating field:", error);
+      // You could add toast notification here if available
+      // showToast("Failed to update " + field, "error");
+
+      // Optionally revert the change in the grid
+      // This would require storing the original value before the edit
     });
 }

@@ -45,7 +45,7 @@ func (s *shipmentService) AddShipment(
 		return nil, err
 	}
 	if exists {
-		shipment, err := s.repo.AddExistingShipmentToUser(ctx, userID, req.ShipmentNumber)
+		shipment, err := s.repo.AddExistingShipmentToUser(ctx, userID, req.ShipmentNumber, req.Recipient, req.Address, req.Notes)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		Warnings:       apiResponse.Metadata.Warnings,
 	}
 
-	shipment, err := s.repo.CreateShipment(ctx, userID, shipmentModel)
+	shipment, err := s.repo.CreateShipment(ctx, userID, shipmentModel, req.Recipient, req.Address, req.Notes)
 	if err != nil {
 		return nil, err
 	}
@@ -1112,6 +1112,18 @@ func (s *shipmentService) GetShipmentDetails(ctx context.Context, userID, shipme
 	}
 
 	return shipmentDetails, nil
+}
+
+func (s *shipmentService) UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+	owns, err := s.repo.CheckUserOwnsShipment(ctx, userID, shipmentID)
+	if err != nil {
+		return err
+	}
+	if !owns {
+		return fmt.Errorf("shipment not found or access denied")
+	}
+
+	return s.repo.UpdateUserShipmentInfo(ctx, userID, shipmentID, recipient, address, notes)
 }
 
 func (s *shipmentService) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {

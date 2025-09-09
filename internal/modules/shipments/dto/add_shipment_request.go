@@ -9,6 +9,9 @@ type AddShipmentRequest struct {
 	ShipmentNumber string `json:"shipmentNumber" form:"shipmentNumber" validate:"required,min=3,max=50"`
 	ShipmentType   string `json:"shipmentType" form:"shipmentType"`
 	SealineCode    string `json:"sealineCode" form:"sealineCode"`
+	Recipient      string `json:"recipient" form:"recipient"`
+	Address        string `json:"address" form:"address"`
+	Notes          string `json:"notes" form:"notes"`
 }
 
 func (r *AddShipmentRequest) Validate() error {

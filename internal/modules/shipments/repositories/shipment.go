@@ -17,13 +17,13 @@ import (
 type ShipmentRepository interface {
 	GetDB() *db.Database
 
-	CreateShipment(ctx context.Context, userID uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
+	CreateShipment(ctx context.Context, userID uuid.UUID, shipment *models.Shipment, recipient, address, notes string) (*models.Shipment, error)
 	GetShipmentByNumber(ctx context.Context, shipmentNumber string) (*models.Shipment, error)
 	GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
 	CheckUserAlreadyTracking(ctx context.Context, userID uuid.UUID, shipmentNumber string) (bool, error)
 	CheckUserOwnsShipment(ctx context.Context, userID, shipmentID uuid.UUID) (bool, error)
 	CheckShipmentExists(ctx context.Context, shipmentNumber string) (bool, error)
-	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error)
+	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber, recipient, address, notes string) (*models.Shipment, error)
 	UpdateShipment(ctx context.Context, id uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
 
 	CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error)
@@ -52,6 +52,7 @@ type ShipmentRepository interface {
 	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
 
 	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
+	UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error
 
 	DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error
@@ -88,6 +89,7 @@ func (r *shipmentRepository) CreateShipment(
 	ctx context.Context,
 	userID uuid.UUID,
 	shipment *models.Shipment,
+	recipient, address, notes string,
 ) (*models.Shipment, error) {
 	db := r.getDBFromContext(ctx)
 	if err := db.WithContext(ctx).Create(&shipment).Error; err != nil {
@@ -97,6 +99,9 @@ func (r *shipmentRepository) CreateShipment(
 	link := models.UserShipment{
 		UserID:     userID,
 		ShipmentID: shipment.ID,
+		Recipient:  recipient,
+		Address:    address,
+		Notes:      notes,
 	}
 
 	if err := db.WithContext(ctx).Create(&link).Error; err != nil {
@@ -176,7 +181,7 @@ func (r *shipmentRepository) CheckShipmentExists(ctx context.Context, shipmentNu
 	return exists, nil
 }
 
-func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error) {
+func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber, recipient, address, notes string) (*models.Shipment, error) {
 	shipment, err := r.GetShipmentByNumber(ctx, shipmentNumber)
 	if err != nil {
 		return nil, err
@@ -185,6 +190,9 @@ func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, user
 	link := &models.UserShipment{
 		UserID:     userID,
 		ShipmentID: shipment.ID,
+		Recipient:  recipient,
+		Address:    address,
+		Notes:      notes,
 	}
 	if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
 		return nil, fmt.Errorf("failed to link shipment to user: %w", err)
@@ -476,6 +484,14 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 		return nil, err
 	}
 
+	// Get user-specific shipment info
+	var userShipment models.UserShipment
+	if err := r.db.DB.WithContext(ctx).
+		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
+		First(&userShipment).Error; err != nil {
+		return nil, fmt.Errorf("failed to get user shipment info: %w", err)
+	}
+
 	locations, err := r.getShipmentLocations(ctx, shipmentID)
 	if err != nil {
 		return nil, err
@@ -515,6 +531,9 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 		ShippingStatus: shipment.ShippingStatus,
 		CreatedAt:      shipment.CreatedAt,
 		UpdatedAt:      shipment.UpdatedAt,
+		Recipient:      userShipment.Recipient,
+		Address:        userShipment.Address,
+		Notes:          userShipment.Notes,
 		Locations:      locations,
 		Route:          route,
 		Vessels:        vessels,
@@ -1178,6 +1197,28 @@ func (r *shipmentRepository) GetShipmentsForGrid(ctx context.Context, userID uui
 	}
 
 	return shipments, nil
+}
+
+func (r *shipmentRepository) UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+	db := r.db.DB.WithContext(ctx)
+
+	result := db.Model(&models.UserShipment{}).
+		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
+		Updates(map[string]interface{}{
+			"recipient": recipient,
+			"address":   address,
+			"notes":     notes,
+		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update user shipment info: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("user shipment relationship not found")
+	}
+
+	return nil
 }
 
 func (r *shipmentRepository) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {
