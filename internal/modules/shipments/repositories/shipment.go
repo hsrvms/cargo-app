@@ -226,9 +226,36 @@ func (r *shipmentRepository) UpdateShipment(ctx context.Context, id uuid.UUID, u
 
 func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(location).FirstOrCreate(location).Error
+
+	// Try to find existing location by locode
+	var existingLocation models.Location
+	err := db.WithContext(ctx).Where("locode = ?", location.Locode).First(&existingLocation).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Location doesn't exist, create new one
+			err = db.WithContext(ctx).Create(location).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Location exists, update it with fresh data
+		existingLocation.Name = location.Name
+		existingLocation.State = location.State
+		existingLocation.Country = location.Country
+		existingLocation.CountryCode = location.CountryCode
+		existingLocation.Latitude = location.Latitude
+		existingLocation.Longitude = location.Longitude
+		existingLocation.Timezone = location.Timezone
+
+		err = db.WithContext(ctx).Save(&existingLocation).Error
+		if err != nil {
+			return nil, err
+		}
+		*location = existingLocation // Update the passed location with the existing ID
 	}
 
 	if shipmentID != nil {
@@ -300,9 +327,33 @@ func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.Ship
 
 func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.UUID, vessel *models.Vessel) (*models.Vessel, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(vessel).FirstOrCreate(vessel).Error
+
+	// Try to find existing vessel by IMO
+	var existingVessel models.Vessel
+	err := db.WithContext(ctx).Where("imo = ?", vessel.Imo).First(&existingVessel).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Vessel doesn't exist, create new one
+			err = db.WithContext(ctx).Create(vessel).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Vessel exists, update it with fresh data
+		existingVessel.Name = vessel.Name
+		existingVessel.Mmsi = vessel.Mmsi
+		existingVessel.CallSign = vessel.CallSign
+		existingVessel.Flag = vessel.Flag
+
+		err = db.WithContext(ctx).Save(&existingVessel).Error
+		if err != nil {
+			return nil, err
+		}
+		*vessel = existingVessel // Update the passed vessel with the existing ID
 	}
 
 	if shipmentID != nil {
@@ -344,9 +395,35 @@ func (r *shipmentRepository) FindVesselByID(ctx context.Context, id *uuid.UUID) 
 
 func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(facility).FirstOrCreate(facility).Error
+
+	// Try to find existing facility by name
+	var existingFacility models.Facility
+	err := db.WithContext(ctx).Where("name = ?", facility.Name).First(&existingFacility).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Facility doesn't exist, create new one
+			err = db.WithContext(ctx).Create(facility).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Facility exists, update it with fresh data
+		existingFacility.CountryCode = facility.CountryCode
+		existingFacility.Locode = facility.Locode
+		existingFacility.BicCode = facility.BicCode
+		existingFacility.SmdgCode = facility.SmdgCode
+		existingFacility.Latitude = facility.Latitude
+		existingFacility.Longitude = facility.Longitude
+
+		err = db.WithContext(ctx).Save(&existingFacility).Error
+		if err != nil {
+			return nil, err
+		}
+		*facility = existingFacility // Update the passed facility with the existing ID
 	}
 
 	if shipmentID != nil {
@@ -386,9 +463,32 @@ func (r *shipmentRepository) FindFacilityByID(ctx context.Context, id *uuid.UUID
 
 func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(container).FirstOrCreate(container).Error
+
+	// Try to find existing container by number
+	var existingContainer models.Container
+	err := db.WithContext(ctx).Where("number = ?", container.Number).First(&existingContainer).Error
+
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			// Container doesn't exist, create new one
+			err = db.WithContext(ctx).Create(container).Error
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		// Container exists, update it with fresh data
+		existingContainer.IsoCode = container.IsoCode
+		existingContainer.SizeType = container.SizeType
+		existingContainer.Status = container.Status
+
+		err = db.WithContext(ctx).Save(&existingContainer).Error
+		if err != nil {
+			return nil, err
+		}
+		*container = existingContainer // Update the passed container with the existing ID
 	}
 
 	if shipmentID != nil {
