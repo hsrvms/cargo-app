@@ -560,9 +560,15 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 			PredictiveETA: r.PredictiveEta,
 		}
 
+		log.Printf("Creating route for shipment %s: ShipmentID=%s, LocationID=%s, RouteType=%s",
+			shipment.ShipmentNumber, route.ShipmentID, route.LocationID, route.RouteType)
+
 		_, err = s.repo.CreateRoute(ctx, route)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create route: %w", err)
+			log.Printf("Failed to create route for shipment %s (ShipmentID=%s, LocationID=%s, RouteType=%s): %v",
+				shipment.ShipmentNumber, route.ShipmentID, route.LocationID, route.RouteType, err)
+			return nil, fmt.Errorf("failed to create route (shipment=%s, location=%s, type=%s): %w",
+				shipment.ShipmentNumber, loc.Locode, routeType, err)
 		}
 		stats.RoutesCreated++
 	}
@@ -860,14 +866,15 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 	// Create a context with the transaction
 	txCtx := context.WithValue(ctx, "tx", tx)
 
-	log.Printf("Cleaning up existing data for shipment %s", existingShipment.ShipmentNumber)
+	log.Printf("Cleaning up existing data for shipment %s (ID: %s)", existingShipment.ShipmentNumber, shipmentID)
 	// Delete all existing related data
 	err = s.repo.DeleteAllShipmentRelatedData(txCtx, shipmentID)
 	if err != nil {
-		log.Printf("Failed to delete existing data for shipment %s: %v", existingShipment.ShipmentNumber, err)
+		log.Printf("Failed to delete existing data for shipment %s (ID: %s): %v", existingShipment.ShipmentNumber, shipmentID, err)
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to delete existing shipment data: %w", err)
 	}
+	log.Printf("Successfully cleaned up existing data for shipment %s", existingShipment.ShipmentNumber)
 
 	// Update shipment metadata
 	shipmentModel := &models.Shipment{

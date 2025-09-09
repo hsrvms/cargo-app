@@ -429,10 +429,6 @@ function drawShipmentRoutes(map, shipment) {
     polyline._segmentIndex = index;
 
     routes.push(polyline);
-
-    console.log(
-      `Drew ${routeType} route segment for ${shipment.shipmentNumber}: ${validLatLngs.length} points`,
-    );
   });
 
   return routes;
@@ -632,9 +628,6 @@ export function updateMapMarkers(map, gridApi) {
 
     // Get current visible shipments
     const visibleShipments = getVisibleShipments(gridApi);
-    console.log(
-      `Updating map with ${visibleShipments.length} visible shipments`,
-    );
 
     const markers = [];
     const routes = [];

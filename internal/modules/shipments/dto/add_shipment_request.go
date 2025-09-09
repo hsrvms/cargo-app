@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 type AddShipmentRequest struct {
@@ -29,6 +30,23 @@ func (r *AddShipmentRequest) Validate() error {
 
 	if !isValidShipmentType(r.ShipmentType) {
 		return fmt.Errorf("shipment type must be one of: CT, BK, BL or empty")
+	}
+
+	// Trim whitespace and validate new fields
+	r.Recipient = strings.TrimSpace(r.Recipient)
+	r.Address = strings.TrimSpace(r.Address)
+	r.Notes = strings.TrimSpace(r.Notes)
+
+	if len(r.Recipient) > 255 {
+		return fmt.Errorf("recipient must be less than 255 characters")
+	}
+
+	if len(r.Address) > 1000 {
+		return fmt.Errorf("address must be less than 1000 characters")
+	}
+
+	if len(r.Notes) > 2000 {
+		return fmt.Errorf("notes must be less than 2000 characters")
 	}
 
 	return nil

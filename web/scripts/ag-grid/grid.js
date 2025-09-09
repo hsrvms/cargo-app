@@ -135,8 +135,15 @@ const columnDefs = [
     width: 150,
     editable: true,
     cellEditor: "agTextCellEditor",
+    tooltipField: "recipient",
     cellRenderer: (params) => {
-      return params.value || "";
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      const value = params.value;
+      if (value.length > 20) {
+        return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+      }
+      return value;
     },
     onCellValueChanged: (params) => {
       updateShipmentField(params.data.id, "recipient", params.newValue || "");
@@ -148,8 +155,15 @@ const columnDefs = [
     width: 200,
     editable: true,
     cellEditor: "agTextCellEditor",
+    tooltipField: "address",
     cellRenderer: (params) => {
-      return params.value || "";
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      const value = params.value;
+      if (value.length > 30) {
+        return `<span title="${value}">${value.substring(0, 27)}...</span>`;
+      }
+      return value;
     },
     onCellValueChanged: (params) => {
       updateShipmentField(params.data.id, "address", params.newValue || "");
@@ -162,11 +176,19 @@ const columnDefs = [
     editable: true,
     cellEditor: "agLargeTextCellEditor",
     cellEditorParams: {
-      maxLength: 500,
-      rows: 3,
+      maxLength: 2000,
+      rows: 4,
+      cols: 50,
     },
+    tooltipField: "notes",
     cellRenderer: (params) => {
-      return params.value || "";
+      if (!params.value)
+        return '<span class="text-gray-400 italic">No notes</span>';
+      const value = params.value;
+      if (value.length > 50) {
+        return `<span title="${value}" class="cursor-help">${value.substring(0, 47)}...</span>`;
+      }
+      return value;
     },
     onCellValueChanged: (params) => {
       updateShipmentField(params.data.id, "notes", params.newValue || "");

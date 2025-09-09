@@ -11,8 +11,6 @@ import {
 function main() {
   const gridApi = getGridApi();
   document.addEventListener("DOMContentLoaded", async () => {
-    console.log("🚀 Initializing Cargo App with Enhanced Map...");
-
     // Initialize modal functions
     initModalFunctions();
 
@@ -38,14 +36,14 @@ function main() {
     window.mapDataService = mapDataService;
 
     // Log initialization status
-    setTimeout(() => {
-      const status = mapDataService.getStatus();
-      console.log("✅ Cargo App initialized:", {
-        mapInitialized: !!map,
-        serviceConnected: status.connected,
-        hasData: status.hasData,
-      });
-    }, 1000);
+    // setTimeout(() => {
+    //   const status = mapDataService.getStatus();
+    //   console.log("✅ Cargo App initialized:", {
+    //     mapInitialized: !!map,
+    //     serviceConnected: status.connected,
+    //     hasData: status.hasData,
+    //   });
+    // }, 1000);
   });
 }
 

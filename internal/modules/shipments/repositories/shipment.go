@@ -80,6 +80,11 @@ func NewShipmentRepository(db *db.Database) ShipmentRepository {
 		log.Printf("failed to migrate shipments: %s", err)
 	}
 
+	// Fix the shipment route constraint to include ShipmentID
+	if err := models.FixShipmentRouteConstraint(db.DB); err != nil {
+		log.Printf("failed to fix shipment route constraint: %s", err)
+	}
+
 	return &shipmentRepository{
 		db: db,
 	}
@@ -264,9 +269,31 @@ func (r *shipmentRepository) FindLocationByID(ctx context.Context, id uuid.UUID)
 
 func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error) {
 	db := r.getDBFromContext(ctx)
-	err := db.WithContext(ctx).Where(route).FirstOrCreate(route).Error
+
+	// Check if route already exists using the unique constraint fields
+	var existingRoute models.ShipmentRoute
+	err := db.WithContext(ctx).Where("shipment_id = ? AND location_id = ? AND route_type = ?",
+		route.ShipmentID, route.LocationID, route.RouteType).First(&existingRoute).Error
+
+	if err == nil {
+		// Route already exists, update it with new data
+		existingRoute.Date = route.Date
+		existingRoute.Actual = route.Actual
+		existingRoute.PredictiveETA = route.PredictiveETA
+		err = db.WithContext(ctx).Save(&existingRoute).Error
+		if err != nil {
+			return nil, fmt.Errorf("failed to update existing route: %w", err)
+		}
+		return &existingRoute, nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		// Some other error occurred
+		return nil, fmt.Errorf("failed to check for existing route: %w", err)
+	}
+
+	// Route doesn't exist, create new one
+	err = db.WithContext(ctx).Create(route).Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create route: %w", err)
 	}
 	return route, nil
 }

@@ -5,7 +5,7 @@
 
 class MapDataService {
   constructor() {
-    this.channelName = 'shipment-map-data';
+    this.channelName = "shipment-map-data";
     this.channel = null;
     this.listeners = new Map();
     this.currentData = {
@@ -14,9 +14,9 @@ class MapDataService {
       gridState: {
         filters: {},
         sorting: [],
-        pagination: { currentPage: 1, pageSize: 15 }
+        pagination: { currentPage: 1, pageSize: 15 },
       },
-      lastUpdate: null
+      lastUpdate: null,
     };
     this.isConnected = false;
     this.initialize();
@@ -28,14 +28,14 @@ class MapDataService {
   initialize() {
     try {
       this.channel = new BroadcastChannel(this.channelName);
-      this.channel.addEventListener('message', this.handleMessage.bind(this));
+      this.channel.addEventListener("message", this.handleMessage.bind(this));
       this.isConnected = true;
-      console.log('✅ MapDataService initialized successfully');
+      console.log("✅ MapDataService initialized successfully");
 
       // Request initial data when a new page connects
       this.requestInitialData();
     } catch (error) {
-      console.error('❌ Failed to initialize MapDataService:', error);
+      console.error("❌ Failed to initialize MapDataService:", error);
       this.isConnected = false;
     }
   }
@@ -46,29 +46,27 @@ class MapDataService {
   handleMessage(event) {
     const { type, data, timestamp } = event.data;
 
-    console.log(`📨 Received message: ${type}`, data);
-
     switch (type) {
-      case 'SHIPMENTS_UPDATE':
+      case "SHIPMENTS_UPDATE":
         this.handleShipmentsUpdate(data);
         break;
-      case 'GRID_STATE_UPDATE':
+      case "GRID_STATE_UPDATE":
         this.handleGridStateUpdate(data);
         break;
-      case 'SELECTION_UPDATE':
+      case "SELECTION_UPDATE":
         this.handleSelectionUpdate(data);
         break;
-      case 'REQUEST_INITIAL_DATA':
+      case "REQUEST_INITIAL_DATA":
         this.handleInitialDataRequest();
         break;
-      case 'INITIAL_DATA_RESPONSE':
+      case "INITIAL_DATA_RESPONSE":
         this.handleInitialDataResponse(data);
         break;
-      case 'MAP_VIEW_CHANGE':
+      case "MAP_VIEW_CHANGE":
         this.handleMapViewChange(data);
         break;
       default:
-        console.warn('Unknown message type:', type);
+        console.warn("Unknown message type:", type);
     }
   }
 
@@ -77,7 +75,7 @@ class MapDataService {
    */
   broadcastShipments(visibleShipments, selectedShipments = []) {
     if (!this.isConnected) {
-      console.warn('MapDataService not connected');
+      console.warn("MapDataService not connected");
       return;
     }
 
@@ -86,18 +84,18 @@ class MapDataService {
     this.currentData.lastUpdate = new Date().toISOString();
 
     const message = {
-      type: 'SHIPMENTS_UPDATE',
+      type: "SHIPMENTS_UPDATE",
       data: {
         visibleShipments,
         selectedShipments,
         shipmentCount: visibleShipments.length,
-        selectedCount: selectedShipments.length
+        selectedCount: selectedShipments.length,
       },
-      timestamp: this.currentData.lastUpdate
+      timestamp: this.currentData.lastUpdate,
     };
 
     this.channel.postMessage(message);
-    this.notifyListeners('shipmentsUpdate', message.data);
+    this.notifyListeners("shipmentsUpdate", message.data);
   }
 
   /**
@@ -110,13 +108,13 @@ class MapDataService {
     this.currentData.lastUpdate = new Date().toISOString();
 
     const message = {
-      type: 'GRID_STATE_UPDATE',
+      type: "GRID_STATE_UPDATE",
       data: gridState,
-      timestamp: this.currentData.lastUpdate
+      timestamp: this.currentData.lastUpdate,
     };
 
     this.channel.postMessage(message);
-    this.notifyListeners('gridStateUpdate', gridState);
+    this.notifyListeners("gridStateUpdate", gridState);
   }
 
   /**
@@ -129,13 +127,13 @@ class MapDataService {
     this.currentData.lastUpdate = new Date().toISOString();
 
     const message = {
-      type: 'SELECTION_UPDATE',
+      type: "SELECTION_UPDATE",
       data: { selectedShipments },
-      timestamp: this.currentData.lastUpdate
+      timestamp: this.currentData.lastUpdate,
     };
 
     this.channel.postMessage(message);
-    this.notifyListeners('selectionUpdate', selectedShipments);
+    this.notifyListeners("selectionUpdate", selectedShipments);
   }
 
   /**
@@ -145,13 +143,13 @@ class MapDataService {
     if (!this.isConnected) return;
 
     const message = {
-      type: 'MAP_VIEW_CHANGE',
+      type: "MAP_VIEW_CHANGE",
       data: viewData,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     this.channel.postMessage(message);
-    this.notifyListeners('mapViewChange', viewData);
+    this.notifyListeners("mapViewChange", viewData);
   }
 
   /**
@@ -161,9 +159,9 @@ class MapDataService {
     if (!this.isConnected) return;
 
     const message = {
-      type: 'REQUEST_INITIAL_DATA',
+      type: "REQUEST_INITIAL_DATA",
       data: { requesterId: Date.now() },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     this.channel.postMessage(message);
@@ -175,7 +173,7 @@ class MapDataService {
   handleShipmentsUpdate(data) {
     this.currentData.visibleShipments = data.visibleShipments || [];
     this.currentData.selectedShipments = data.selectedShipments || [];
-    this.notifyListeners('shipmentsUpdate', data);
+    this.notifyListeners("shipmentsUpdate", data);
   }
 
   /**
@@ -183,7 +181,7 @@ class MapDataService {
    */
   handleGridStateUpdate(data) {
     this.currentData.gridState = { ...this.currentData.gridState, ...data };
-    this.notifyListeners('gridStateUpdate', data);
+    this.notifyListeners("gridStateUpdate", data);
   }
 
   /**
@@ -191,7 +189,7 @@ class MapDataService {
    */
   handleSelectionUpdate(data) {
     this.currentData.selectedShipments = data.selectedShipments || [];
-    this.notifyListeners('selectionUpdate', data.selectedShipments);
+    this.notifyListeners("selectionUpdate", data.selectedShipments);
   }
 
   /**
@@ -201,9 +199,9 @@ class MapDataService {
     // Only respond if we have data to share
     if (this.currentData.visibleShipments.length > 0) {
       const message = {
-        type: 'INITIAL_DATA_RESPONSE',
+        type: "INITIAL_DATA_RESPONSE",
         data: this.currentData,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
       this.channel.postMessage(message);
     }
@@ -214,14 +212,14 @@ class MapDataService {
    */
   handleInitialDataResponse(data) {
     this.currentData = { ...this.currentData, ...data };
-    this.notifyListeners('initialDataReceived', data);
+    this.notifyListeners("initialDataReceived", data);
   }
 
   /**
    * Handle map view change
    */
   handleMapViewChange(data) {
-    this.notifyListeners('mapViewChange', data);
+    this.notifyListeners("mapViewChange", data);
   }
 
   /**
@@ -234,13 +232,20 @@ class MapDataService {
     this.listeners.get(eventType).push(callback);
 
     // If we already have data and this is a data-related event, call immediately
-    if (eventType === 'shipmentsUpdate' && this.currentData.visibleShipments.length > 0) {
-      setTimeout(() => callback({
-        visibleShipments: this.currentData.visibleShipments,
-        selectedShipments: this.currentData.selectedShipments,
-        shipmentCount: this.currentData.visibleShipments.length,
-        selectedCount: this.currentData.selectedShipments.length
-      }), 0);
+    if (
+      eventType === "shipmentsUpdate" &&
+      this.currentData.visibleShipments.length > 0
+    ) {
+      setTimeout(
+        () =>
+          callback({
+            visibleShipments: this.currentData.visibleShipments,
+            selectedShipments: this.currentData.selectedShipments,
+            shipmentCount: this.currentData.visibleShipments.length,
+            selectedCount: this.currentData.selectedShipments.length,
+          }),
+        0,
+      );
     }
   }
 
@@ -262,7 +267,7 @@ class MapDataService {
    */
   notifyListeners(eventType, data) {
     if (this.listeners.has(eventType)) {
-      this.listeners.get(eventType).forEach(callback => {
+      this.listeners.get(eventType).forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
@@ -296,7 +301,10 @@ class MapDataService {
       shipmentCount: this.currentData.visibleShipments.length,
       selectedCount: this.currentData.selectedShipments.length,
       lastUpdate: this.currentData.lastUpdate,
-      listenerCount: Array.from(this.listeners.values()).reduce((sum, arr) => sum + arr.length, 0)
+      listenerCount: Array.from(this.listeners.values()).reduce(
+        (sum, arr) => sum + arr.length,
+        0,
+      ),
     };
   }
 
@@ -309,7 +317,7 @@ class MapDataService {
     }
     this.listeners.clear();
     this.isConnected = false;
-    console.log('🧹 MapDataService destroyed');
+    console.log("🧹 MapDataService destroyed");
   }
 }
 
@@ -320,6 +328,6 @@ const mapDataService = new MapDataService();
 export { MapDataService, mapDataService };
 
 // Also make it available globally for debugging
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.mapDataService = mapDataService;
 }

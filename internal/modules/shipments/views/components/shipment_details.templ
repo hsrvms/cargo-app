@@ -21,6 +21,16 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 					<p class="text-sm font-mono bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-white">{ d.ShipmentNumber }</p>
 				</div>
 				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Type</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.ShipmentType != "" {
+							{ d.ShipmentType }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Status</label>
 					<p class="text-sm font-semibold text-blue-600 dark:text-blue-400">{ d.ShippingStatus }</p>
 				</div>
@@ -28,9 +38,50 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Sealine</label>
 					<p class="text-sm text-gray-900 dark:text-white">{ d.SealineName }</p>
 				</div>
-				<div>
+				<div class="col-span-2">
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Last Updated</label>
 					<p class="text-sm text-gray-900 dark:text-white">{ d.UpdatedAt.Format("2006-01-02 15:04") }</p>
+				</div>
+			</div>
+		</div>
+		<!-- User Information -->
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+			<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+				<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+				</svg>
+				Delivery Information
+			</h2>
+			<div class="grid grid-cols-1 gap-4">
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Recipient</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.Recipient != "" {
+							{ d.Recipient }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Address</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.Address != "" {
+							{ d.Address }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Notes</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.Notes != "" {
+							{ d.Notes }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">No notes</span>
+						}
+					</p>
 				</div>
 			</div>
 		</div>

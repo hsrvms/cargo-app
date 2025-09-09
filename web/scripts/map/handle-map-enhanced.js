@@ -69,8 +69,7 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
 
   // If we have a gridApi, get initial data and set up grid listeners
   if (gridApi) {
-    console.log("🗺️ Initializing map with grid data");
-    const visibleShipments = getVisibleShipments(gridApi, { debug: true });
+    const visibleShipments = getVisibleShipments(gridApi, { debug: false });
     updateMapWithShipments(visibleShipments);
 
     // Broadcast initial data to other pages
@@ -94,7 +93,6 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
   currentMapInstance._shipmentMarkers = markers;
   currentMapInstance._shipmentRoutes = routes;
 
-  console.log("✅ Enhanced map initialized successfully");
   return currentMapInstance;
 }
 
@@ -104,13 +102,11 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
 function setupMapDataServiceListeners() {
   // Listen for shipment updates from other pages
   mapDataService.addEventListener("shipmentsUpdate", (data) => {
-    console.log("📨 Received shipments update:", data);
     updateMapWithShipments(data.visibleShipments, data.selectedShipments);
   });
 
   // Listen for initial data responses
   mapDataService.addEventListener("initialDataReceived", (data) => {
-    console.log("📨 Received initial data:", data);
     if (data.visibleShipments && data.visibleShipments.length > 0) {
       updateMapWithShipments(data.visibleShipments, data.selectedShipments);
     }
@@ -121,8 +117,6 @@ function setupMapDataServiceListeners() {
     console.log("📨 Received selection update:", selectedShipments);
     highlightSelectedShipments(selectedShipments);
   });
-
-  console.log("✅ MapDataService listeners set up");
 }
 
 /**
@@ -178,8 +172,6 @@ function setupGridEventListeners(gridApi) {
   gridEvents.forEach((eventName) => {
     gridApi.addEventListener(eventName, updateMapFromGrid);
   });
-
-  console.log("✅ Grid event listeners set up");
 }
 
 /**
@@ -208,8 +200,6 @@ function setupMapEventListeners() {
 
   currentMapInstance.on("moveend", broadcastViewChange);
   currentMapInstance.on("zoomend", broadcastViewChange);
-
-  console.log("✅ Map event listeners set up");
 }
 
 /**
@@ -217,10 +207,6 @@ function setupMapEventListeners() {
  */
 function updateMapWithShipments(visibleShipments, selectedShipments = []) {
   if (!currentMapInstance) return;
-
-  console.log(
-    `🗺️ Updating map with ${visibleShipments.length} visible shipments`,
-  );
 
   // Clear existing markers and routes
   clearMapElements();
@@ -277,10 +263,6 @@ function updateMapWithShipments(visibleShipments, selectedShipments = []) {
   if (validCoordinates.length === 0) {
     showNoRoutesNotification();
   }
-
-  console.log(
-    `✅ Map updated: ${markers.length} markers, ${routes.length} routes`,
-  );
 }
 
 /**
@@ -560,8 +542,6 @@ export function showRouteStatistics(map, gridApi) {
 export function drawShipmentRoutes(shipments) {
   if (!currentMapInstance || !shipments.length) return;
 
-  console.log(`Drawing routes for ${shipments.length} shipments...`);
-
   // Use original route drawing logic for curved routes
   shipments.forEach((shipment) => {
     const shipmentRoutes = drawShipmentRoutesForShipment(
@@ -692,10 +672,6 @@ function drawShipmentRoutesForShipment(map, shipment) {
     polyline._segmentIndex = index;
 
     shipmentRoutes.push(polyline);
-
-    console.log(
-      `Drew ${routeType} route segment for ${shipment.shipmentNumber}: ${validLatLngs.length} points`,
-    );
   });
 
   return shipmentRoutes;
@@ -893,8 +869,6 @@ export function showNoRoutesNotification() {
  * Can be called from main.js or standalone map page
  */
 export function initEnhancedMap(gridApi = null, options = {}) {
-  console.log("🚀 Initializing enhanced map functionality...");
-
   // Check if MapDataService is available
   if (!mapDataService.isServiceConnected()) {
     console.error(

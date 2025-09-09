@@ -56,10 +56,13 @@ func AddUniqueConstraint(db *gorm.DB) error {
 // Usage examples:
 
 // Create a user-shipment relationship
-func CreateUserShipmentRelation(db *gorm.DB, userID, shipmentID uuid.UUID) error {
+func CreateUserShipmentRelation(db *gorm.DB, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
 	userShipment := &UserShipment{
 		UserID:     userID,
 		ShipmentID: shipmentID,
+		Recipient:  recipient,
+		Address:    address,
+		Notes:      notes,
 	}
 
 	return db.Create(userShipment).Error
