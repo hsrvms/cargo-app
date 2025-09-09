@@ -196,15 +196,20 @@ class MapDataService {
    * Handle request for initial data
    */
   handleInitialDataRequest() {
-    // Only respond if we have data to share
-    if (this.currentData.visibleShipments.length > 0) {
-      const message = {
-        type: "INITIAL_DATA_RESPONSE",
-        data: this.currentData,
-        timestamp: new Date().toISOString(),
-      };
-      this.channel.postMessage(message);
-    }
+    // Always respond to let requester know this page exists
+    const message = {
+      type: "INITIAL_DATA_RESPONSE",
+      data: {
+        ...this.currentData,
+        hasData: this.currentData.visibleShipments.length > 0,
+        isGridPage: true,
+      },
+      timestamp: new Date().toISOString(),
+    };
+    this.channel.postMessage(message);
+    console.log(
+      `📡 Responding to initial data request with ${this.currentData.visibleShipments.length} shipments`,
+    );
   }
 
   /**

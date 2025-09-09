@@ -2,6 +2,7 @@ import { actionCellRenderer } from "./action-cell-renderer.js";
 import { deleteSelectedBtnEvent } from "./ag-grid-toolbar.js";
 import { mapDataService } from "/scripts/map/map-data-service.js";
 import { FilterManager } from "./filter-manager.js";
+import { getVisibleShipments } from "./get-visible-shipments.js";
 // Map integration now handled by enhanced map service
 
 let gridApi;
@@ -326,8 +327,14 @@ export function loadShipments(gridApi) {
     .then((response) => response.json())
     .then((data) => {
       gridApi.setGridOption("rowData", data.rows);
-      // Broadcast data to MapDataService for map synchronization
-      mapDataService.broadcastShipments(data.rows, []);
+      // Wait for grid to process the data, then broadcast visible shipments
+      setTimeout(() => {
+        const visibleShipments = getVisibleShipments(gridApi, { debug: false });
+        mapDataService.broadcastShipments(visibleShipments, []);
+        console.log(
+          `📡 Broadcasted ${visibleShipments.length} visible shipments to map service`,
+        );
+      }, 100); // Small delay to ensure grid has processed the data
     })
     .catch((error) => {
       console.error("Error fetching data:", error);

@@ -67,16 +67,42 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
   // Set up cross-page communication
   setupMapDataServiceListeners();
 
-  // If we have a gridApi, get initial data and set up grid listeners
+  // If we have a gridApi, set up listeners and handle initial data
   if (gridApi) {
-    const visibleShipments = getVisibleShipments(gridApi, { debug: false });
-    updateMapWithShipments(visibleShipments);
-
-    // Broadcast initial data to other pages
-    mapDataService.broadcastShipments(visibleShipments);
-
     // Set up grid event listeners for real-time updates
     setupGridEventListeners(gridApi);
+
+    // Check if grid already has data
+    const hasGridData =
+      gridApi.getDisplayedRowCount && gridApi.getDisplayedRowCount() > 0;
+
+    if (hasGridData) {
+      // Grid has data, get visible shipments and broadcast
+      const visibleShipments = getVisibleShipments(gridApi, { debug: false });
+      updateMapWithShipments(visibleShipments);
+      mapDataService.broadcastShipments(visibleShipments);
+      console.log(
+        `📡 Enhanced map initialized with ${visibleShipments.length} visible shipments`,
+      );
+    } else {
+      // Grid doesn't have data yet, wait for it to load
+      console.log(
+        "🗺️ Grid detected but no data yet, waiting for data to load...",
+      );
+
+      // Listen for when data gets loaded
+      const dataLoadedListener = () => {
+        const visibleShipments = getVisibleShipments(gridApi, { debug: false });
+        updateMapWithShipments(visibleShipments);
+        mapDataService.broadcastShipments(visibleShipments);
+        console.log(
+          `📡 Enhanced map updated with ${visibleShipments.length} visible shipments after data load`,
+        );
+      };
+
+      // Listen for first data load (this will fire when loadShipments completes)
+      gridApi.addEventListener("firstDataRendered", dataLoadedListener);
+    }
   } else if (isStandaloneMap) {
     console.log(
       "🗺️ Initializing standalone map, requesting data from other pages",
@@ -467,19 +493,6 @@ export function addMapControls(map, gridApi) {
             <polyline points="4,18 8.5,11.5 13.5,15.5 22,4"/>
           </svg>
         </button>
-        <button id="optimizeRoutesBtn" class="map-control-btn" title="Optimize Route Display">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7L12 12L22 7L12 2"/>
-            <path d="M2 17L12 22L22 17"/>
-            <path d="M2 12L12 17L22 12"/>
-          </svg>
-        </button>
-        <button id="showRouteStatsBtn" class="map-control-btn" title="Show Route Statistics">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 4v12l-4-2-4 2V4"/>
-            <rect x="6" y="2" width="12" height="18" rx="2" ry="2"/>
-          </svg>
-        </button>
       </div>
     `;
 
@@ -499,7 +512,12 @@ export function addMapControls(map, gridApi) {
 
     div.querySelector("#fitMapBtn").addEventListener("click", (e) => {
       e.preventDefault();
-      fitMapToMarkers(map);
+      const coordinates = markers.map((marker) => marker.getLatLng());
+      if (coordinates.length > 0) {
+        fitMapToMarkers(map, coordinates);
+      } else {
+        console.warn("No markers to fit to");
+      }
     });
 
     div.querySelector("#toggleMarkersBtn").addEventListener("click", (e) => {
@@ -512,16 +530,6 @@ export function addMapControls(map, gridApi) {
       toggleRoutes(map);
     });
 
-    div.querySelector("#optimizeRoutesBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      optimizeRouteDisplay(map);
-    });
-
-    div.querySelector("#showRouteStatsBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      showRouteStatistics(map, gridApi);
-    });
-
     return div;
   };
 
@@ -529,15 +537,6 @@ export function addMapControls(map, gridApi) {
 }
 
 // Add missing functions for the additional controls
-export function optimizeRouteDisplay(map) {
-  console.log("Optimizing route display...");
-  // Implementation for route optimization
-}
-
-export function showRouteStatistics(map, gridApi) {
-  console.log("Showing route statistics...");
-  // Implementation for route statistics
-}
 
 export function drawShipmentRoutes(shipments) {
   if (!currentMapInstance || !shipments.length) return;
