@@ -1,5 +1,6 @@
 import { actionCellRenderer } from "./action-cell-renderer.js";
 import { deleteSelectedBtnEvent } from "./ag-grid-toolbar.js";
+import { mapDataService } from "/scripts/map/map-data-service.js";
 // Map integration now handled by enhanced map service
 
 let gridApi;
@@ -236,6 +237,12 @@ const gridOptions = {
     });
   },
 
+  onSelectionChanged: (event) => {
+    const selectedRows = event.api.getSelectedRows();
+    // Broadcast selection changes to map service
+    mapDataService.broadcastSelection(selectedRows);
+  },
+
   // Map integration now handled by MapDataService in enhanced map
   getRowId: (params) => String(params.data.id),
 };
@@ -270,7 +277,8 @@ export function loadShipments(gridApi) {
     .then((response) => response.json())
     .then((data) => {
       gridApi.setGridOption("rowData", data.rows);
-      // Map updates now handled automatically by MapDataService
+      // Broadcast data to MapDataService for map synchronization
+      mapDataService.broadcastShipments(data.rows, []);
     })
     .catch((error) => {
       console.error("Error fetching data:", error);

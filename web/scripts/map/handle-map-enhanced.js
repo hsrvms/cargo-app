@@ -930,3 +930,12 @@ export function getMapStatus() {
     serviceStatus: mapDataService.getStatus(),
   };
 }
+
+// Export updateMapWithShipments for standalone map usage
+export { updateMapWithShipments };
+
+// Make functions globally available for debugging and standalone usage
+if (typeof window !== "undefined") {
+  window.updateMapWithShipments = updateMapWithShipments;
+  window.getMapStatus = getMapStatus;
+}

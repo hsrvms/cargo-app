@@ -18,6 +18,7 @@ templ MapPage() {
 			<script src="/assets/js/tailwindcss.js"></script>
 			<script src="/config/tailwind.config.js"></script>
 			<script src="/assets/js/htmx.min.js" defer></script>
+			<script src="/assets/js/htmx-ext-response-targets.js" defer></script>
 			<script src="/assets/js/leaflet.js"></script>
 			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 			<style>
@@ -132,16 +133,46 @@ templ MapPage() {
 					</div>
 				</div>
 			</main>
+			<!-- Modal (hidden by default) -->
+			<div
+				id="shipment-modal"
+				class="fixed inset-0 z-[9999] hidden opacity-0 bg-black bg-opacity-50 transition-opacity duration-300"
+				onclick="closeModal()"
+			>
+				<div class="flex items-center justify-center min-h-screen px-4 py-6">
+					<div
+						class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
+						id="modal-content"
+						onclick="event.stopPropagation()"
+					>
+						<div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+							<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Shipment Details</h2>
+							<button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200">
+								<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
+						</div>
+						<div id="modal-body" class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+							<!-- HTMX will load shipment details here -->
+						</div>
+					</div>
+				</div>
+			</div>
 			<!-- Toast Container -->
 			<div id="toast-container" class="fixed top-5 right-5 space-y-3 z-50"></div>
 			<!-- Scripts -->
 			<script type="module">
-				import { initEnhancedMap, getMapStatus } from '/scripts/map/handle-map-enhanced.js';
+				import { initEnhancedMap, getMapStatus, updateMapWithShipments } from '/scripts/map/handle-map-enhanced.js';
 				import { mapDataService } from '/scripts/map/map-data-service.js';
+				import { initModalFunctions } from '/scripts/ag-grid/modal-functions.js';
 
 				// Initialize the standalone map when DOM is loaded
 				document.addEventListener('DOMContentLoaded', async () => {
 					console.log('🗺️ Initializing standalone map page...');
+
+					// Initialize modal functions
+					initModalFunctions();
 
 					// Initialize the enhanced map in standalone mode
 					const map = initEnhancedMap(null, {
@@ -156,39 +187,65 @@ templ MapPage() {
 						return;
 					}
 
+					// Load shipments data for standalone mode
+					try {
+						const response = await fetch('/api/shipments/grid-data');
+						if (response.ok) {
+							const data = await response.json();
+							console.log(`📊 Loaded ${data.rows.length} shipments for map`);
+
+							// Broadcast the data to the map via the service
+							mapDataService.broadcastShipments(data.rows, []);
+
+							// Update the map directly as well
+							updateMapWithShipments(data.rows, []);
+						} else {
+							console.error('Failed to load shipments data:', response.status);
+						}
+					} catch (error) {
+						console.error('Error loading shipments data:', error);
+					}
+
 					// Update UI based on service status
 					function updateConnectionStatus() {
 						const status = mapDataService.getStatus();
 						const connectionStatus = document.getElementById('connectionStatus');
-						const indicator = connectionStatus.querySelector('.connection-indicator');
-						const statusText = connectionStatus.querySelector('.status-text');
+						const indicator = connectionStatus?.querySelector('.connection-indicator');
+						const statusText = connectionStatus?.querySelector('.status-text');
 						const dataStatus = document.getElementById('dataStatus');
-						const shipmentCount = dataStatus.querySelector('.shipment-count');
+						const shipmentCount = dataStatus?.querySelector('.shipment-count');
 						const mapStatusContent = document.getElementById('mapStatusContent');
 						const lastUpdateTime = document.getElementById('lastUpdateTime');
 
-						if (status.connected) {
-							indicator.className = 'connection-indicator connected';
-							statusText.textContent = 'Connected';
-							shipmentCount.textContent = status.shipmentCount;
+						if (status.connected && status.hasData) {
+							if (indicator) indicator.className = 'connection-indicator connected';
+							if (statusText) {
+								statusText.textContent = 'Connected';
+								statusText.className = "text-sm text-gray-600 dark:text-gray-300";
+							}
+							if (shipmentCount) shipmentCount.textContent = status.shipmentCount;
 
-							mapStatusContent.innerHTML = `
-								<span class="connection-indicator connected"></span>
-								<span>${status.shipmentCount} shipments • ${status.selectedCount} selected</span>
-							`;
+							if (mapStatusContent) {
+								mapStatusContent.innerHTML = `
+									<span class="connection-indicator connected"></span>
+									<span>${status.shipmentCount} shipments • ${status.selectedCount} selected</span>
+								`;
+							}
 
-							if (status.lastUpdate) {
+							if (status.lastUpdate && lastUpdateTime) {
 								const updateTime = new Date(status.lastUpdate);
 								lastUpdateTime.textContent = `Last updated: ${updateTime.toLocaleTimeString()}`;
 							}
 						} else {
-							indicator.className = 'connection-indicator disconnected';
-							statusText.textContent = 'Disconnected';
-							shipmentCount.textContent = '0';
-							mapStatusContent.innerHTML = `
-								<span class="connection-indicator disconnected"></span>
-								<span>No connection to grid data</span>
-							`;
+							if (indicator) indicator.className = 'connection-indicator disconnected';
+							if (statusText) statusText.textContent = status.connected ? 'No Data' : 'Disconnected';
+							if (shipmentCount) shipmentCount.textContent = '0';
+							if (mapStatusContent) {
+								mapStatusContent.innerHTML = `
+									<span class="connection-indicator disconnected"></span>
+									<span>${status.connected ? 'Loading shipments...' : 'No connection to grid data'}</span>
+								`;
+							}
 						}
 					}
 
