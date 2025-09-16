@@ -16,7 +16,7 @@ func (s *Server) initRoutes() {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	auth.RegisterRoutes(s.Echo, api, s.DB)
+	auth.RegisterRoutes(s.Echo, api, s.DB, s.Config)
 	shipments.RegisterRoutes(s.Echo, api, s.DB, s.Config)
 	jobs.RegisterRoutes(s.Echo, api, s.DB, s.Config, s.JobScheduler)
 

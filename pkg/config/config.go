@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	Server         ServerConfig
-	Database       DatabaseConfig
-	SafeCubeAPI    SafeCubeAPIConfig
-	BackgroundJobs BackgroundJobsConfig
+	Server           ServerConfig
+	Database         DatabaseConfig
+	SafeCubeAPI      SafeCubeAPIConfig
+	BackgroundJobs   BackgroundJobsConfig
+	MaxAvailableUser int
 }
 
 type ServerConfig struct {
@@ -68,6 +69,7 @@ func New() *Config {
 			ShipmentMaxPerRun:           getEnvAsInt("SHIPMENT_MAX_PER_RUN", 0),
 			ShipmentSkipRecentlyUpdated: getEnvAsDuration("SHIPMENT_SKIP_RECENTLY_UPDATED", 30*time.Minute),
 		},
+		MaxAvailableUser: getEnvAsInt("MAX_AVAILABLE_USER", 0),
 	}
 }
 
