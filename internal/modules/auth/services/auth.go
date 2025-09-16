@@ -6,6 +6,7 @@ import (
 	"go-starter/internal/modules/auth/dto"
 	"go-starter/internal/modules/auth/models"
 	"go-starter/internal/modules/auth/repositories"
+	"go-starter/pkg/config"
 
 	"github.com/google/uuid"
 )
@@ -13,12 +14,14 @@ import (
 type AuthService struct {
 	repo       *repositories.UserRepository
 	jwtService *JWTService
+	config     *config.Config
 }
 
-func NewAuthService(repo *repositories.UserRepository, jwtService *JWTService) *AuthService {
+func NewAuthService(repo *repositories.UserRepository, jwtService *JWTService, config *config.Config) *AuthService {
 	return &AuthService{
 		repo:       repo,
 		jwtService: jwtService,
+		config:     config,
 	}
 }
 
@@ -29,6 +32,17 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 	if exists {
 		return nil, fmt.Errorf("user with email %s already exists", req.Email)
+	}
+
+	// Check user limit if MAX_AVAILABLE_USER is set (> 0)
+	if s.config.MaxAvailableUser > 0 {
+		userCount, err := s.repo.GetUserCount(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user count: %w", err)
+		}
+		if userCount >= int64(s.config.MaxAvailableUser) {
+			return nil, fmt.Errorf("maximum number of users reached (%d)", s.config.MaxAvailableUser)
+		}
 	}
 
 	user := &models.User{

@@ -47,6 +47,11 @@ func (h *AuthAPIHandler) Register(c echo.Context) error {
 				"error": "User with this email already exists",
 			})
 		}
+		if strings.Contains(err.Error(), "maximum number of users reached") {
+			return c.JSON(http.StatusForbidden, map[string]string{
+				"error": "Registration limit reached. Maximum number of users allowed has been exceeded.",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to register user",
 		})

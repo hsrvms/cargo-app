@@ -180,6 +180,8 @@ func (h *AuthWEBHandler) categorizeAuthError(err error) (int, string) {
 		return http.StatusUnauthorized, "Invalid email or password"
 	case strings.Contains(errStr, "already exists"):
 		return http.StatusConflict, "User with this email already exists"
+	case strings.Contains(errStr, "maximum number of users reached"):
+		return http.StatusForbidden, "Registration limit reached. Maximum number of users allowed has been exceeded."
 	default:
 		return http.StatusInternalServerError, "An error occurred. Please try again"
 	}
