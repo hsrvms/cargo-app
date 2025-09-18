@@ -2,6 +2,7 @@ package main
 
 import (
 	"go-starter/internal/modules/auth/models"
+	filterModels "go-starter/internal/modules/filters/models"
 	shipmentModels "go-starter/internal/modules/shipments/models"
 	"go-starter/internal/server"
 	"go-starter/pkg/config"
@@ -25,6 +26,7 @@ func main() {
 	// Run GORM auto-migration with cleanup
 	if err := database.AutoMigrate(
 		&models.User{},
+		&filterModels.UserFilter{},
 		&shipmentModels.Shipment{},
 		&shipmentModels.UserShipment{},
 		&shipmentModels.Location{},
