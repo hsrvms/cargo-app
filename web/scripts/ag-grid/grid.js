@@ -10,7 +10,6 @@ let filterManager;
 
 const rowSelection = {
   mode: "multiRow",
-  checkboxes: true,
   // enableClickSelection: false,
 };
 
@@ -19,7 +18,8 @@ const columnDefs = [
     field: "shipmentNumber",
     headerName: "Shipment Number",
     filter: "agTextColumnFilter",
-    maxWidth: 200,
+    width: 200,
+    minWidth: 180,
     cellRenderer: (params) => {
       if (!params.value) return "";
 
@@ -37,7 +37,8 @@ const columnDefs = [
     field: "shippingStatus",
     headerName: "Status",
     filter: "agSetColumnFilter",
-    maxWidth: 120,
+    width: 120,
+    minWidth: 100,
     cellRenderer: (params) => {
       const statusMap = {
         IN_TRANSIT: "In Transit",
@@ -61,6 +62,7 @@ const columnDefs = [
     field: "originPort",
     headerName: "Origin",
     width: 200,
+    minWidth: 150,
     filter: "agTextColumnFilter",
     cellRenderer: (params) => {
       const pol = params.data?.route?.pol;
@@ -74,6 +76,7 @@ const columnDefs = [
     field: "destinationPort",
     headerName: "Destination",
     width: 200,
+    minWidth: 150,
     filter: "agTextColumnFilter",
     cellRenderer: (params) => {
       const pod = params.data?.route?.pod;
@@ -86,7 +89,8 @@ const columnDefs = [
   {
     field: "vesselInfo",
     headerName: "Vessel",
-    maxWidth: 180,
+    width: 180,
+    minWidth: 150,
     filter: "agSetColumnFilter",
     cellRenderer: (params) => {
       const vessels = params.data?.vessels;
@@ -100,7 +104,8 @@ const columnDefs = [
   {
     field: "containerCount",
     headerName: "Containers",
-    maxWidth: 120,
+    width: 120,
+    minWidth: 100,
     cellRenderer: (params) => {
       const containers = params.data?.containers;
       if (containers && containers.length > 0) {
@@ -113,6 +118,7 @@ const columnDefs = [
     field: "nextETA",
     headerName: "Next ETA",
     width: 120,
+    minWidth: 100,
     filter: "agDateColumnFilter",
     cellRenderer: (params) => {
       const route = params.data?.route;
@@ -138,9 +144,32 @@ const columnDefs = [
     },
   },
   {
+    field: "consignee",
+    headerName: "Consignee",
+    width: 150,
+    minWidth: 120,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "consignee",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      const value = params.value;
+      if (value.length > 20) {
+        return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+      }
+      return value;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "consignee", params.newValue || "");
+    },
+  },
+  {
     field: "recipient",
     headerName: "Recipient",
     width: 150,
+    minWidth: 120,
     filter: "agTextColumnFilter",
     editable: true,
     cellEditor: "agTextCellEditor",
@@ -159,13 +188,115 @@ const columnDefs = [
     },
   },
   {
-    field: "address",
-    headerName: "Address",
-    width: 200,
+    field: "shipper",
+    headerName: "Shipper",
+    width: 150,
+    minWidth: 120,
     filter: "agTextColumnFilter",
     editable: true,
     cellEditor: "agTextCellEditor",
-    tooltipField: "address",
+    tooltipField: "shipper",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      const value = params.value;
+      if (value.length > 20) {
+        return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+      }
+      return value;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "shipper", params.newValue || "");
+    },
+  },
+  {
+    field: "assignedTo",
+    headerName: "Assigned To",
+    width: 140,
+    minWidth: 120,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "assignedTo",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not assigned</span>';
+      const value = params.value;
+      if (value.length > 18) {
+        return `<span title="${value}">${value.substring(0, 15)}...</span>`;
+      }
+      return value;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "assignedTo", params.newValue || "");
+    },
+  },
+  {
+    field: "placeOfLoading",
+    headerName: "Place of Loading",
+    width: 180,
+    minWidth: 150,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "placeOfLoading",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      const value = params.value;
+      if (value.length > 25) {
+        return `<span title="${value}">${value.substring(0, 22)}...</span>`;
+      }
+      return value;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(
+        params.data.id,
+        "placeOfLoading",
+        params.newValue || "",
+      );
+    },
+  },
+  {
+    field: "placeOfDelivery",
+    headerName: "Place of Delivery",
+    width: 180,
+    minWidth: 150,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "placeOfDelivery",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      const value = params.value;
+      if (value.length > 25) {
+        return `<span title="${value}">${value.substring(0, 22)}...</span>`;
+      }
+      return value;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(
+        params.data.id,
+        "placeOfDelivery",
+        params.newValue || "",
+      );
+    },
+  },
+  {
+    field: "finalDestination",
+    headerName: "Final Destination",
+    width: 200,
+    minWidth: 150,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agLargeTextCellEditor",
+    cellEditorParams: {
+      maxLength: 1000,
+      rows: 3,
+      cols: 40,
+    },
+    tooltipField: "finalDestination",
     cellRenderer: (params) => {
       if (!params.value)
         return '<span class="text-gray-400 italic">Not specified</span>';
@@ -176,13 +307,181 @@ const columnDefs = [
       return value;
     },
     onCellValueChanged: (params) => {
-      updateShipmentField(params.data.id, "address", params.newValue || "");
+      updateShipmentField(
+        params.data.id,
+        "finalDestination",
+        params.newValue || "",
+      );
+    },
+  },
+  {
+    field: "containerType",
+    headerName: "Container Type",
+    width: 140,
+    minWidth: 120,
+    filter: "agSetColumnFilter",
+    editable: true,
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: {
+      values: [
+        "20GP",
+        "40GP",
+        "40HC",
+        "45HC",
+        "20FR",
+        "40FR",
+        "20OT",
+        "40OT",
+        "20RF",
+        "40RF",
+      ],
+    },
+    tooltipField: "containerType",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      return `<span class="px-2 py-1 text-xs font-mono bg-blue-100 text-blue-800 rounded">${params.value}</span>`;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(
+        params.data.id,
+        "containerType",
+        params.newValue || "",
+      );
+    },
+  },
+  {
+    field: "mbl",
+    headerName: "MBL",
+    width: 140,
+    minWidth: 100,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "mbl",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      return `<span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">${params.value}</span>`;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "mbl", params.newValue || "");
+    },
+  },
+  {
+    field: "customs",
+    headerName: "Customs",
+    width: 150,
+    minWidth: 120,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "customs",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      const value = params.value;
+      if (value.length > 20) {
+        return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+      }
+      return value;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "customs", params.newValue || "");
+    },
+  },
+  {
+    field: "invoiceAmount",
+    headerName: "Invoice Amount",
+    width: 130,
+    minWidth: 110,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "invoiceAmount",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      return `<span class="font-mono text-green-700">${params.value}</span>`;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(
+        params.data.id,
+        "invoiceAmount",
+        params.newValue || "",
+      );
+    },
+  },
+  {
+    field: "cost",
+    headerName: "Cost",
+    width: 120,
+    minWidth: 100,
+    filter: "agTextColumnFilter",
+    editable: true,
+    cellEditor: "agTextCellEditor",
+    tooltipField: "cost",
+    cellRenderer: (params) => {
+      if (!params.value)
+        return '<span class="text-gray-400 italic">Not specified</span>';
+      return `<span class="font-mono text-orange-700">${params.value}</span>`;
+    },
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "cost", params.newValue || "");
+    },
+  },
+  {
+    field: "customsProcessed",
+    headerName: "Customs ✓",
+    width: 110,
+    minWidth: 90,
+    filter: false,
+    editable: true,
+    cellRenderer: "agCheckboxCellRenderer",
+    cellEditor: "agCheckboxCellEditor",
+    onCellValueChanged: (params) => {
+      updateShipmentField(
+        params.data.id,
+        "customsProcessed",
+        params.newValue === true,
+      );
+    },
+  },
+  {
+    field: "invoiced",
+    headerName: "Invoiced ✓",
+    width: 110,
+    minWidth: 90,
+    filter: false,
+    editable: true,
+    cellRenderer: "agCheckboxCellRenderer",
+    cellEditor: "agCheckboxCellEditor",
+    onCellValueChanged: (params) => {
+      updateShipmentField(params.data.id, "invoiced", params.newValue === true);
+    },
+  },
+  {
+    field: "paymentReceived",
+    headerName: "Payment ✓",
+    width: 110,
+    minWidth: 90,
+    filter: false,
+    editable: true,
+    cellRenderer: "agCheckboxCellRenderer",
+    cellEditor: "agCheckboxCellEditor",
+    onCellValueChanged: (params) => {
+      updateShipmentField(
+        params.data.id,
+        "paymentReceived",
+        params.newValue === true,
+      );
     },
   },
   {
     field: "notes",
     headerName: "Notes",
-    width: 200,
+    width: 250,
+    minWidth: 150,
     filter: "agTextColumnFilter",
     editable: true,
     cellEditor: "agLargeTextCellEditor",
@@ -208,8 +507,9 @@ const columnDefs = [
   {
     field: "actions",
     headerName: "Actions",
-    width: 100,
     pinned: "right",
+    width: 100,
+    minWidth: 80,
     sortable: false,
     resizable: false,
     suppressMovable: true,
@@ -224,22 +524,80 @@ const gridOptions = {
     suppressHeaderMenuButton: true,
     resizable: true,
     sortable: true,
-    // filter: true,
-    // suppressHeaderFilterButton: true,
+    filter: true,
+    suppressHeaderFilterButton: false,
+    minWidth: 120, // Minimum width for readability
   },
   rowSelection,
   pagination: true,
-  paginationPageSize: 15, // Reduced due to richer data per row
-  paginationPageSizeSelector: [15, 25, 50],
+  paginationPageSize: 20, // Increased due to more columns
+  paginationPageSizeSelector: [20, 50, 100],
 
   // Performance optimizations for richer data
-  rowBuffer: 10,
+  rowBuffer: 15,
   suppressCellFocus: true,
   animateRows: true,
 
-  // Handle large datasets better
+  // Handle large datasets better with many columns
   suppressColumnVirtualisation: false,
   suppressRowVirtualisation: false,
+
+  // Ensure single horizontal scrollbar
+  suppressHorizontalScroll: false,
+  alwaysShowHorizontalScroll: false,
+  suppressScrollOnNewData: true,
+
+  // Prevent auto-sizing to viewport width
+  suppressSizeToFit: true,
+
+  // Allow columns to maintain their natural widths
+  enableColResize: true,
+
+  // Fix scrollbar synchronization
+  scrollbarWidth: 17,
+  suppressMiddleClickScrolls: false,
+  // Column management
+  sideBar: {
+    toolPanels: [
+      {
+        id: "columns",
+        labelDefault: "Columns",
+        labelKey: "columns",
+        iconKey: "columns",
+        toolPanel: "agColumnsToolPanel",
+        toolPanelParams: {
+          suppressRowGroups: true,
+          suppressValues: true,
+          suppressPivots: true,
+          suppressPivotMode: true,
+          suppressColumnFilter: false,
+          suppressColumnSelectAll: false,
+          suppressColumnExpandAll: false,
+        },
+      },
+      {
+        id: "filters",
+        labelDefault: "Filters",
+        labelKey: "filters",
+        iconKey: "filter",
+        toolPanel: "agFiltersToolPanel",
+      },
+    ],
+    // defaultToolPanel: "columns",
+  },
+
+  // Enable horizontal scrolling - don't auto-size columns
+  onFirstDataRendered: (params) => {
+    // Hide some columns by default to reduce initial width but keep essential ones visible
+    const columnsToHide = [
+      "customs",
+      "mbl",
+      "placeOfLoading",
+      "placeOfDelivery",
+      "containerType",
+    ];
+    params.api.setColumnsVisible(columnsToHide, false);
+  },
 
   onGridReady: (event) => {
     event.api.setFilterModel({
@@ -270,6 +628,9 @@ const gridOptions = {
 export function getGridApi() {
   const gridDiv = document.querySelector("#grid");
   gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+  // Make gridApi globally accessible
+  window.gridApi = gridApi;
 
   return gridApi;
 }
@@ -348,8 +709,30 @@ function updateShipmentField(shipmentId, field, value) {
     return;
   }
 
+  // Map field names from ag-grid to API expectations if needed
+  const fieldMapping = {
+    // Most fields use the same name, but we can add exceptions here if needed
+    // Example: "gridFieldName": "apiFieldName"
+  };
+
+  const apiField = fieldMapping[field] || field;
+
+  // Create payload with ONLY the changed field
   const payload = {};
-  payload[field] = value || "";
+
+  // Handle different field types properly
+  if (typeof value === "boolean") {
+    payload[apiField] = value;
+  } else if (value === null || value === undefined) {
+    payload[apiField] = "";
+  } else {
+    payload[apiField] = String(value).trim();
+  }
+
+  console.log(
+    `Updating ONLY ${apiField} for shipment ${shipmentId} with value:`,
+    payload[apiField],
+  );
 
   fetch(`/api/shipments/${shipmentId}/update-info`, {
     method: "PATCH",
@@ -369,8 +752,15 @@ function updateShipmentField(shipmentId, field, value) {
         console.error("Error updating field:", data.error);
         // You could add toast notification here if available
         // showToast("Error: " + data.error, "error");
+
+        // Revert the change in the grid on error
+        if (window.gridApi) {
+          loadShipments(window.gridApi); // Reload data to get correct values
+        }
       } else {
-        console.log(`Successfully updated ${field} for shipment ${shipmentId}`);
+        console.log(
+          `Successfully updated ${apiField} for shipment ${shipmentId}`,
+        );
         // You could add success toast notification here if available
         // showToast(`${field} updated successfully`, "success");
       }
@@ -380,7 +770,9 @@ function updateShipmentField(shipmentId, field, value) {
       // You could add toast notification here if available
       // showToast("Failed to update " + field, "error");
 
-      // Optionally revert the change in the grid
-      // This would require storing the original value before the edit
+      // Revert the change in the grid on error
+      if (window.gridApi) {
+        loadShipments(window.gridApi); // Reload data to get correct values
+      }
     });
 }

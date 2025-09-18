@@ -17,13 +17,13 @@ import (
 type ShipmentRepository interface {
 	GetDB() *db.Database
 
-	CreateShipment(ctx context.Context, userID uuid.UUID, shipment *models.Shipment, recipient, address, notes string) (*models.Shipment, error)
+	CreateShipment(ctx context.Context, userID uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
 	GetShipmentByNumber(ctx context.Context, shipmentNumber string) (*models.Shipment, error)
 	GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
 	CheckUserAlreadyTracking(ctx context.Context, userID uuid.UUID, shipmentNumber string) (bool, error)
 	CheckUserOwnsShipment(ctx context.Context, userID, shipmentID uuid.UUID) (bool, error)
 	CheckShipmentExists(ctx context.Context, shipmentNumber string) (bool, error)
-	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber, recipient, address, notes string) (*models.Shipment, error)
+	AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error)
 	UpdateShipment(ctx context.Context, id uuid.UUID, shipment *models.Shipment) (*models.Shipment, error)
 
 	CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error)
@@ -52,7 +52,8 @@ type ShipmentRepository interface {
 	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
 
 	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
-	UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error
+	UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error
+	UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error
 
 	DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error
@@ -94,7 +95,6 @@ func (r *shipmentRepository) CreateShipment(
 	ctx context.Context,
 	userID uuid.UUID,
 	shipment *models.Shipment,
-	recipient, address, notes string,
 ) (*models.Shipment, error) {
 	db := r.getDBFromContext(ctx)
 	if err := db.WithContext(ctx).Create(&shipment).Error; err != nil {
@@ -104,9 +104,6 @@ func (r *shipmentRepository) CreateShipment(
 	link := models.UserShipment{
 		UserID:     userID,
 		ShipmentID: shipment.ID,
-		Recipient:  recipient,
-		Address:    address,
-		Notes:      notes,
 	}
 
 	if err := db.WithContext(ctx).Create(&link).Error; err != nil {
@@ -186,7 +183,7 @@ func (r *shipmentRepository) CheckShipmentExists(ctx context.Context, shipmentNu
 	return exists, nil
 }
 
-func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber, recipient, address, notes string) (*models.Shipment, error) {
+func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, userID uuid.UUID, shipmentNumber string) (*models.Shipment, error) {
 	shipment, err := r.GetShipmentByNumber(ctx, shipmentNumber)
 	if err != nil {
 		return nil, err
@@ -195,9 +192,6 @@ func (r *shipmentRepository) AddExistingShipmentToUser(ctx context.Context, user
 	link := &models.UserShipment{
 		UserID:     userID,
 		ShipmentID: shipment.ID,
-		Recipient:  recipient,
-		Address:    address,
-		Notes:      notes,
 	}
 	if err := r.db.DB.WithContext(ctx).Create(&link).Error; err != nil {
 		return nil, fmt.Errorf("failed to link shipment to user: %w", err)
@@ -650,23 +644,36 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 	}
 
 	return &dto.ShipmentDetailsResponse{
-		ID:             shipment.ID,
-		ShipmentType:   shipment.ShipmentType,
-		ShipmentNumber: shipment.ShipmentNumber,
-		SealineCode:    shipment.SealineCode,
-		SealineName:    shipment.SealineName,
-		ShippingStatus: shipment.ShippingStatus,
-		CreatedAt:      shipment.CreatedAt,
-		UpdatedAt:      shipment.UpdatedAt,
-		Recipient:      userShipment.Recipient,
-		Address:        userShipment.Address,
-		Notes:          userShipment.Notes,
-		Locations:      locations,
-		Route:          route,
-		Vessels:        vessels,
-		Facilities:     facilities,
-		Containers:     containers,
-		RouteData:      routeData,
+		ID:               shipment.ID,
+		ShipmentType:     shipment.ShipmentType,
+		ShipmentNumber:   shipment.ShipmentNumber,
+		SealineCode:      shipment.SealineCode,
+		SealineName:      shipment.SealineName,
+		ShippingStatus:   shipment.ShippingStatus,
+		CreatedAt:        shipment.CreatedAt,
+		UpdatedAt:        shipment.UpdatedAt,
+		Consignee:        shipment.Consignee,
+		Recipient:        shipment.Recipient,
+		AssignedTo:       shipment.AssignedTo,
+		PlaceOfLoading:   shipment.PlaceOfLoading,
+		PlaceOfDelivery:  shipment.PlaceOfDelivery,
+		FinalDestination: shipment.FinalDestination,
+		ContainerType:    shipment.ContainerType,
+		Shipper:          shipment.Shipper,
+		InvoiceAmount:    shipment.InvoiceAmount,
+		Cost:             shipment.Cost,
+		Customs:          shipment.Customs,
+		MBL:              shipment.MBL,
+		Notes:            shipment.Notes,
+		CustomsProcessed: shipment.CustomsProcessed,
+		Invoiced:         shipment.Invoiced,
+		PaymentReceived:  shipment.PaymentReceived,
+		Locations:        locations,
+		Route:            route,
+		Vessels:          vessels,
+		Facilities:       facilities,
+		Containers:       containers,
+		RouteData:        routeData,
 	}, nil
 }
 
@@ -1326,23 +1333,92 @@ func (r *shipmentRepository) GetShipmentsForGrid(ctx context.Context, userID uui
 	return shipments, nil
 }
 
-func (r *shipmentRepository) UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+func (r *shipmentRepository) UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error {
 	db := r.db.DB.WithContext(ctx)
 
-	result := db.Model(&models.UserShipment{}).
-		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
+	result := db.Model(&models.Shipment{}).
+		Where("id = ?", shipmentID).
 		Updates(map[string]interface{}{
-			"recipient": recipient,
-			"address":   address,
-			"notes":     notes,
+			"consignee":         req.Consignee,
+			"recipient":         req.Recipient,
+			"assigned_to":       req.AssignedTo,
+			"place_of_loading":  req.PlaceOfLoading,
+			"place_of_delivery": req.PlaceOfDelivery,
+			"final_destination": req.FinalDestination,
+			"container_type":    req.ContainerType,
+			"shipper":           req.Shipper,
+			"invoice_amount":    req.InvoiceAmount,
+			"cost":              req.Cost,
+			"customs":           req.Customs,
+			"mbl":               req.MBL,
+			"notes":             req.Notes,
+			"customs_processed": req.CustomsProcessed,
+			"invoiced":          req.Invoiced,
+			"payment_received":  req.PaymentReceived,
+			"updated_at":        time.Now(),
 		})
 
 	if result.Error != nil {
-		return fmt.Errorf("failed to update user shipment info: %w", result.Error)
+		return fmt.Errorf("failed to update shipment info: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("user shipment relationship not found")
+		return fmt.Errorf("shipment not found")
+	}
+
+	return nil
+}
+
+func (r *shipmentRepository) UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error {
+	db := r.db.DB.WithContext(ctx)
+
+	// Validate and prepare the updates map
+	validUpdates := make(map[string]interface{})
+
+	// Define field mappings from JSON to database columns
+	fieldMappings := map[string]string{
+		"consignee":        "consignee",
+		"recipient":        "recipient",
+		"assignedTo":       "assigned_to",
+		"placeOfLoading":   "place_of_loading",
+		"placeOfDelivery":  "place_of_delivery",
+		"finalDestination": "final_destination",
+		"containerType":    "container_type",
+		"shipper":          "shipper",
+		"invoiceAmount":    "invoice_amount",
+		"cost":             "cost",
+		"customs":          "customs",
+		"mbl":              "mbl",
+		"notes":            "notes",
+		"customsProcessed": "customs_processed",
+		"invoiced":         "invoiced",
+		"paymentReceived":  "payment_received",
+	}
+
+	// Process each update
+	for jsonField, value := range updates {
+		if dbField, exists := fieldMappings[jsonField]; exists {
+			validUpdates[dbField] = value
+		}
+	}
+
+	// Always update the timestamp
+	validUpdates["updated_at"] = time.Now()
+
+	if len(validUpdates) == 1 { // Only timestamp
+		return fmt.Errorf("no valid fields to update")
+	}
+
+	result := db.Model(&models.Shipment{}).
+		Where("id = ?", shipmentID).
+		Updates(validUpdates)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update shipment info: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("shipment not found")
 	}
 
 	return nil

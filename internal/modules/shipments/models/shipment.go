@@ -18,6 +18,26 @@ type Shipment struct {
 	CreatedAt      time.Time      `json:"created_at" gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	UpdatedAt      time.Time      `json:"updated_at" gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	Warnings       pq.StringArray `json:"warnings" gorm:"type:text[];default:'{}'"`
+
+	// Shipment information
+	Consignee        string `json:"consignee" gorm:"type:varchar(255)"`
+	Recipient        string `json:"recipient" gorm:"type:varchar(255)"`
+	AssignedTo       string `json:"assigned_to" gorm:"type:varchar(255)"`
+	PlaceOfLoading   string `json:"place_of_loading" gorm:"type:varchar(255)"`
+	PlaceOfDelivery  string `json:"place_of_delivery" gorm:"type:varchar(255)"`
+	FinalDestination string `json:"final_destination" gorm:"type:text"`
+	ContainerType    string `json:"container_type" gorm:"type:varchar(100)"`
+	Shipper          string `json:"shipper" gorm:"type:varchar(255)"`
+	InvoiceAmount    string `json:"invoice_amount" gorm:"type:varchar(100)"`
+	Cost             string `json:"cost" gorm:"type:varchar(100)"`
+	Customs          string `json:"customs" gorm:"type:varchar(255)"`
+	MBL              string `json:"mbl" gorm:"type:varchar(100)"`
+	Notes            string `json:"notes" gorm:"type:text"`
+
+	// Boolean fields
+	CustomsProcessed bool `json:"customs_processed" gorm:"type:boolean;default:false"`
+	Invoiced         bool `json:"invoiced" gorm:"type:boolean;default:false"`
+	PaymentReceived  bool `json:"payment_received" gorm:"type:boolean;default:false"`
 }
 
 // TableName specifies the table name for Shipment

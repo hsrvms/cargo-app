@@ -17,6 +17,23 @@
     --ag-secondary-foreground-color: rgb(156, 163, 175);
 }
 
+/* AG-Grid Horizontal Scrolling - Single scrollbar fix */
+.ag-theme-alpine {
+    /* Ensure horizontal scrolling works properly */
+    overflow-x: auto !important;
+}
+
+.ag-theme-alpine .ag-root-wrapper {
+    /* Allow the grid to expand horizontally */
+    min-width: fit-content;
+}
+
+/* Ensure grid container doesn't constrain width */
+#grid {
+    width: 100% !important;
+    overflow-x: visible !important;
+}
+
 /* Profile Dropdown Styles */
 .profile-dropdown {
     position: relative;

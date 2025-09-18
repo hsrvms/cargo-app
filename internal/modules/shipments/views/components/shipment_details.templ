@@ -52,7 +52,17 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				</svg>
 				Delivery Information
 			</h2>
-			<div class="grid grid-cols-1 gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Consignee</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.Consignee != "" {
+							{ d.Consignee }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Recipient</label>
 					<p class="text-sm text-gray-900 dark:text-white">
@@ -64,26 +74,133 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 					</p>
 				</div>
 				<div>
-					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Address</label>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Assigned To</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.Address != "" {
-							{ d.Address }
+						if d.AssignedTo != "" {
+							{ d.AssignedTo }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not assigned</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Shipper</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.Shipper != "" {
+							{ d.Shipper }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
 					</p>
 				</div>
 				<div>
-					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Notes</label>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Place of Loading</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.Notes != "" {
-							{ d.Notes }
+						if d.PlaceOfLoading != "" {
+							{ d.PlaceOfLoading }
 						} else {
-							<span class="text-gray-500 dark:text-gray-400">No notes</span>
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Place of Delivery</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.PlaceOfDelivery != "" {
+							{ d.PlaceOfDelivery }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Final Destination</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.FinalDestination != "" {
+							{ d.FinalDestination }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Container Type</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.ContainerType != "" {
+							{ d.ContainerType }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Invoice Amount</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.InvoiceAmount != "" {
+							{ d.InvoiceAmount }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Cost</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.Cost != "" {
+							{ d.Cost }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Customs</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.Customs != "" {
+							{ d.Customs }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
+						}
+					</p>
+				</div>
+				<div>
+					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">MBL</label>
+					<p class="text-sm text-gray-900 dark:text-white">
+						if d.MBL != "" {
+							{ d.MBL }
+						} else {
+							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
 					</p>
 				</div>
 			</div>
+			<!-- Boolean Status Fields -->
+			<div class="mt-6">
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Status</h3>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div class="flex items-center space-x-2">
+						<div class={ "w-3 h-3 rounded-full", templ.KV("bg-green-500", d.CustomsProcessed), templ.KV("bg-gray-300 dark:bg-gray-600", !d.CustomsProcessed) }></div>
+						<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Customs Processed</label>
+					</div>
+					<div class="flex items-center space-x-2">
+						<div class={ "w-3 h-3 rounded-full", templ.KV("bg-green-500", d.Invoiced), templ.KV("bg-gray-300 dark:bg-gray-600", !d.Invoiced) }></div>
+						<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Invoiced</label>
+					</div>
+					<div class="flex items-center space-x-2">
+						<div class={ "w-3 h-3 rounded-full", templ.KV("bg-green-500", d.PaymentReceived), templ.KV("bg-gray-300 dark:bg-gray-600", !d.PaymentReceived) }></div>
+						<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Payment Received</label>
+					</div>
+				</div>
+			</div>
+			<!-- Notes Section -->
+			if d.Notes != "" {
+				<div class="mt-6">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
+					<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+						<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{ d.Notes }</p>
+					</div>
+				</div>
+			}
 		</div>
 		<!-- Route Information -->
 		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
