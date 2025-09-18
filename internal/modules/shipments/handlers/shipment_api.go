@@ -306,7 +306,7 @@ func (h *shipmentAPIHandler) UpdateUserShipmentInfo(c echo.Context) error {
 		})
 	}
 
-	err = h.shipmentService.UpdateUserShipmentInfo(ctx, userID, shipmentID, req.Recipient, req.Address, req.Notes)
+	err = h.shipmentService.UpdateShipmentInfo(ctx, userID, shipmentID, req.Recipient, req.Address, req.Notes)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),

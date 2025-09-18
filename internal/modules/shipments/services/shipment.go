@@ -45,7 +45,24 @@ func (s *shipmentService) AddShipment(
 		return nil, err
 	}
 	if exists {
-		shipment, err := s.repo.AddExistingShipmentToUser(ctx, userID, req.ShipmentNumber, req.Recipient, req.Address, req.Notes)
+		// For existing shipments, we need to update the shipment info and add user relationship
+		existingShipment, err := s.repo.GetShipmentByNumber(ctx, req.ShipmentNumber)
+		if err != nil {
+			return nil, err
+		}
+
+		// Update shipment with new recipient, address, notes if provided
+		if req.Recipient != "" || req.Address != "" || req.Notes != "" {
+			existingShipment.Recipient = req.Recipient
+			existingShipment.Address = req.Address
+			existingShipment.Notes = req.Notes
+			_, err = s.repo.UpdateShipment(ctx, existingShipment.ID, existingShipment)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		shipment, err := s.repo.AddExistingShipmentToUser(ctx, userID, req.ShipmentNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +102,12 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		Warnings:       apiResponse.Metadata.Warnings,
 	}
 
-	shipment, err := s.repo.CreateShipment(ctx, userID, shipmentModel, req.Recipient, req.Address, req.Notes)
+	// Set the shipment info fields
+	shipmentModel.Recipient = req.Recipient
+	shipmentModel.Address = req.Address
+	shipmentModel.Notes = req.Notes
+
+	shipment, err := s.repo.CreateShipment(ctx, userID, shipmentModel)
 	if err != nil {
 		return nil, err
 	}
@@ -1121,7 +1143,7 @@ func (s *shipmentService) GetShipmentDetails(ctx context.Context, userID, shipme
 	return shipmentDetails, nil
 }
 
-func (s *shipmentService) UpdateUserShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+func (s *shipmentService) UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
 	owns, err := s.repo.CheckUserOwnsShipment(ctx, userID, shipmentID)
 	if err != nil {
 		return err
@@ -1130,7 +1152,7 @@ func (s *shipmentService) UpdateUserShipmentInfo(ctx context.Context, userID, sh
 		return fmt.Errorf("shipment not found or access denied")
 	}
 
-	return s.repo.UpdateUserShipmentInfo(ctx, userID, shipmentID, recipient, address, notes)
+	return s.repo.UpdateShipmentInfo(ctx, userID, shipmentID, recipient, address, notes)
 }
 
 func (s *shipmentService) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {

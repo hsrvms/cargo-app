@@ -18,6 +18,11 @@ type Shipment struct {
 	CreatedAt      time.Time      `json:"created_at" gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	UpdatedAt      time.Time      `json:"updated_at" gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	Warnings       pq.StringArray `json:"warnings" gorm:"type:text[];default:'{}'"`
+
+	// Shipment information
+	Recipient string `json:"recipient" gorm:"type:varchar(255)"`
+	Address   string `json:"address" gorm:"type:text"`
+	Notes     string `json:"notes" gorm:"type:text"`
 }
 
 // TableName specifies the table name for Shipment

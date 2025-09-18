@@ -15,11 +15,6 @@ type UserShipment struct {
 	ShipmentID uuid.UUID `json:"shipment_id" gorm:"type:uuid;not null;index"`
 	AddedAt    time.Time `json:"added_at" gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 
-	// User-specific shipment information
-	Recipient string `json:"recipient" gorm:"type:varchar(255)"`
-	Address   string `json:"address" gorm:"type:text"`
-	Notes     string `json:"notes" gorm:"type:text"`
-
 	// Foreign key relationships
 	User     authModels.User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE" json:"user"`
 	Shipment Shipment        `gorm:"foreignKey:ShipmentID;references:ID;constraint:OnDelete:CASCADE" json:"shipment"`
@@ -56,13 +51,10 @@ func AddUniqueConstraint(db *gorm.DB) error {
 // Usage examples:
 
 // Create a user-shipment relationship
-func CreateUserShipmentRelation(db *gorm.DB, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+func CreateUserShipmentRelation(db *gorm.DB, userID, shipmentID uuid.UUID) error {
 	userShipment := &UserShipment{
 		UserID:     userID,
 		ShipmentID: shipmentID,
-		Recipient:  recipient,
-		Address:    address,
-		Notes:      notes,
 	}
 
 	return db.Create(userShipment).Error
