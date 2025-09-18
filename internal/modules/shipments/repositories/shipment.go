@@ -53,6 +53,7 @@ type ShipmentRepository interface {
 
 	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 	UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error
+	UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error
 
 	DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error
@@ -1356,6 +1357,61 @@ func (r *shipmentRepository) UpdateShipmentInfo(ctx context.Context, userID, shi
 			"payment_received":  req.PaymentReceived,
 			"updated_at":        time.Now(),
 		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update shipment info: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("shipment not found")
+	}
+
+	return nil
+}
+
+func (r *shipmentRepository) UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error {
+	db := r.db.DB.WithContext(ctx)
+
+	// Validate and prepare the updates map
+	validUpdates := make(map[string]interface{})
+
+	// Define field mappings from JSON to database columns
+	fieldMappings := map[string]string{
+		"consignee":        "consignee",
+		"recipient":        "recipient",
+		"assignedTo":       "assigned_to",
+		"placeOfLoading":   "place_of_loading",
+		"placeOfDelivery":  "place_of_delivery",
+		"finalDestination": "final_destination",
+		"containerType":    "container_type",
+		"shipper":          "shipper",
+		"invoiceAmount":    "invoice_amount",
+		"cost":             "cost",
+		"customs":          "customs",
+		"mbl":              "mbl",
+		"notes":            "notes",
+		"customsProcessed": "customs_processed",
+		"invoiced":         "invoiced",
+		"paymentReceived":  "payment_received",
+	}
+
+	// Process each update
+	for jsonField, value := range updates {
+		if dbField, exists := fieldMappings[jsonField]; exists {
+			validUpdates[dbField] = value
+		}
+	}
+
+	// Always update the timestamp
+	validUpdates["updated_at"] = time.Now()
+
+	if len(validUpdates) == 1 { // Only timestamp
+		return fmt.Errorf("no valid fields to update")
+	}
+
+	result := db.Model(&models.Shipment{}).
+		Where("id = ?", shipmentID).
+		Updates(validUpdates)
 
 	if result.Error != nil {
 		return fmt.Errorf("failed to update shipment info: %w", result.Error)

@@ -1184,6 +1184,18 @@ func (s *shipmentService) UpdateShipmentInfo(ctx context.Context, userID, shipme
 	return s.repo.UpdateShipmentInfo(ctx, userID, shipmentID, req)
 }
 
+func (s *shipmentService) UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error {
+	owns, err := s.repo.CheckUserOwnsShipment(ctx, userID, shipmentID)
+	if err != nil {
+		return err
+	}
+	if !owns {
+		return fmt.Errorf("shipment not found or access denied")
+	}
+
+	return s.repo.UpdateShipmentInfoPartial(ctx, userID, shipmentID, updates)
+}
+
 func (s *shipmentService) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {
 	err := s.repo.DeleteUserShipment(ctx, userID, shipmentID)
 	if err != nil {

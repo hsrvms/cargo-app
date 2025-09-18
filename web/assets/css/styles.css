@@ -17,7 +17,7 @@
     --ag-secondary-foreground-color: rgb(156, 163, 175);
 }
 
-/* AG-Grid Horizontal Scrolling */
+/* AG-Grid Horizontal Scrolling - Single scrollbar fix */
 .ag-theme-alpine {
     /* Ensure horizontal scrolling works properly */
     overflow-x: auto !important;
@@ -28,21 +28,10 @@
     min-width: fit-content;
 }
 
-.ag-theme-alpine .ag-header-viewport,
-.ag-theme-alpine .ag-body-viewport {
-    /* Ensure viewports don't constrain width */
-    overflow-x: auto !important;
-}
-
-.ag-theme-alpine .ag-center-cols-viewport {
-    /* Allow horizontal scrolling in the main content area */
-    overflow-x: auto !important;
-}
-
 /* Ensure grid container doesn't constrain width */
 #grid {
     width: 100% !important;
-    overflow-x: auto !important;
+    overflow-x: visible !important;
 }
 
 /* Profile Dropdown Styles */

@@ -15,6 +15,7 @@ type ShipmentService interface {
 	GetShipmentByID(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
 	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 	UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error
+	UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error
 	SyncShipment(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
 	RefreshShipment(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error)
 	SystemRefreshShipment(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error)

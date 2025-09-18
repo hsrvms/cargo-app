@@ -293,20 +293,15 @@ func (h *shipmentAPIHandler) UpdateUserShipmentInfo(c echo.Context) error {
 		})
 	}
 
-	var req dto.UpdateUserShipmentInfoRequest
-	if err := c.Bind(&req); err != nil {
+	// Parse raw JSON to support partial updates
+	var rawData map[string]interface{}
+	if err := c.Bind(&rawData); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "invalid request body",
 		})
 	}
 
-	if err := req.Validate(); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
-	}
-
-	err = h.shipmentService.UpdateShipmentInfo(ctx, userID, shipmentID, &req)
+	err = h.shipmentService.UpdateShipmentInfoPartial(ctx, userID, shipmentID, rawData)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
