@@ -14,6 +14,11 @@ const rowSelection = {
   // enableClickSelection: false,
 };
 
+// TODO:
+// Correct Checkboxes
+// Remove menu button on every column.
+// Remove filter buttons on some columns
+// Test it if its working correctly
 const columnDefs = [
   // Basic Information Group
   {
