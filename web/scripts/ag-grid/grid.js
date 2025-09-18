@@ -15,200 +15,593 @@ const rowSelection = {
 };
 
 const columnDefs = [
+  // Basic Information Group
   {
-    field: "shipmentNumber",
-    headerName: "Shipment Number",
-    filter: "agTextColumnFilter",
-    maxWidth: 200,
-    cellRenderer: (params) => {
-      if (!params.value) return "";
+    headerName: "Basic Information",
+    children: [
+      {
+        field: "shipmentNumber",
+        headerName: "Shipment Number",
+        filter: "agTextColumnFilter",
+        width: 200,
+        minWidth: 180,
+        pinned: "left",
+        cellRenderer: (params) => {
+          if (!params.value) return "";
 
-      return `
-        <button
-          class="text-blue-600 dark:text-blue-300 hover:underline font-medium"
-          onclick="openModalFetchDetails('${params.data.id}')"
-        >
-          ${params.value} - ${params.data.shipmentType}
-        </button>
-      `;
-    },
+          return `
+            <button
+              class="text-blue-600 dark:text-blue-300 hover:underline font-medium"
+              onclick="openModalFetchDetails('${params.data.id}')"
+            >
+              ${params.value} - ${params.data.shipmentType}
+            </button>
+          `;
+        },
+      },
+      {
+        field: "shippingStatus",
+        headerName: "Status",
+        filter: "agSetColumnFilter",
+        width: 120,
+        minWidth: 100,
+        cellRenderer: (params) => {
+          const statusMap = {
+            IN_TRANSIT: "In Transit",
+            DELIVERED: "Delivered",
+            PLANNED: "Planned",
+            UNKNOWN: "Unknown",
+          };
+
+          const status = statusMap[params.value] || "Unknown";
+          const statusClasses = {
+            "In Transit": "bg-blue-100 text-blue-800",
+            Delivered: "bg-green-100 text-green-800",
+            Planned: "bg-yellow-100 text-yellow-800",
+            Unknown: "bg-gray-100 text-gray-800",
+          };
+          const classes = statusClasses[status] || statusClasses["Unknown"];
+          return `<span class="px-2 py-1 text-xs font-semibold rounded-full ${classes}">${status}</span>`;
+        },
+      },
+    ],
   },
+
+  // Route Information Group
   {
-    field: "shippingStatus",
+    headerName: "Route & Transport",
+    children: [
+      {
+        field: "originPort",
+        headerName: "Origin",
+        width: 200,
+        minWidth: 150,
+        filter: "agTextColumnFilter",
+        cellRenderer: (params) => {
+          const pol = params.data?.route?.pol;
+          if (pol && pol.location) {
+            return `${pol.location.name} (${pol.location.locode})`;
+          }
+          return "N/A";
+        },
+      },
+      {
+        field: "destinationPort",
+        headerName: "Destination",
+        width: 200,
+        minWidth: 150,
+        filter: "agTextColumnFilter",
+        cellRenderer: (params) => {
+          const pod = params.data?.route?.pod;
+          if (pod && pod.location) {
+            return `${pod.location.name} (${pod.location.locode})`;
+          }
+          return "N/A";
+        },
+      },
+      {
+        field: "vesselInfo",
+        headerName: "Vessel",
+        width: 180,
+        minWidth: 150,
+        filter: "agSetColumnFilter",
+        cellRenderer: (params) => {
+          const vessels = params.data?.vessels;
+          if (vessels && vessels.length > 0) {
+            const vessel = vessels[0];
+            return `${vessel.name || "Unknown"} (${vessel.imo || "N/A"})`;
+          }
+          return "N/A";
+        },
+      },
+      {
+        field: "containerCount",
+        headerName: "Containers",
+        width: 120,
+        minWidth: 100,
+        cellRenderer: (params) => {
+          const containers = params.data?.containers;
+          if (containers && containers.length > 0) {
+            return containers.length.toString();
+          }
+          return "0";
+        },
+      },
+      {
+        field: "nextETA",
+        headerName: "Next ETA",
+        width: 120,
+        minWidth: 100,
+        filter: "agDateColumnFilter",
+        cellRenderer: (params) => {
+          const route = params.data?.route;
+          if (!route) return "N/A";
+
+          // Find next port with a future date
+          const ports = [
+            route.prepol,
+            route.pol,
+            route.pod,
+            route.postpod,
+          ].filter(Boolean);
+          const now = new Date();
+
+          for (const port of ports) {
+            if (port.date && new Date(port.date) > now) {
+              const date = new Date(port.date);
+              return date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              });
+            }
+          }
+
+          return "N/A";
+        },
+      },
+    ],
+  },
+
+  // Contact Information Group
+  {
+    headerName: "Contact Information",
+    children: [
+      {
+        field: "consignee",
+        headerName: "Consignee",
+        width: 150,
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "consignee",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          const value = params.value;
+          if (value.length > 20) {
+            return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "consignee",
+            params.newValue || "",
+          );
+        },
+      },
+      {
+        field: "recipient",
+        headerName: "Recipient",
+        width: 150,
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "recipient",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          const value = params.value;
+          if (value.length > 20) {
+            return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "recipient",
+            params.newValue || "",
+          );
+        },
+      },
+      {
+        field: "shipper",
+        headerName: "Shipper",
+        width: 150,
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "shipper",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          const value = params.value;
+          if (value.length > 20) {
+            return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(params.data.id, "shipper", params.newValue || "");
+        },
+      },
+      {
+        field: "assignedTo",
+        headerName: "Assigned To",
+        width: 140,
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "assignedTo",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not assigned</span>';
+          const value = params.value;
+          if (value.length > 18) {
+            return `<span title="${value}">${value.substring(0, 15)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "assignedTo",
+            params.newValue || "",
+          );
+        },
+      },
+    ],
+  },
+
+  // Location Information Group
+  {
+    headerName: "Location Details",
+    children: [
+      {
+        field: "placeOfLoading",
+        headerName: "Place of Loading",
+        width: 180,
+        minWidth: 150,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "placeOfLoading",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          const value = params.value;
+          if (value.length > 25) {
+            return `<span title="${value}">${value.substring(0, 22)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "placeOfLoading",
+            params.newValue || "",
+          );
+        },
+      },
+      {
+        field: "placeOfDelivery",
+        headerName: "Place of Delivery",
+        width: 180,
+        minWidth: 150,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "placeOfDelivery",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          const value = params.value;
+          if (value.length > 25) {
+            return `<span title="${value}">${value.substring(0, 22)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "placeOfDelivery",
+            params.newValue || "",
+          );
+        },
+      },
+      {
+        field: "finalDestination",
+        headerName: "Final Destination",
+        width: 200,
+        minWidth: 150,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+          maxLength: 1000,
+          rows: 3,
+          cols: 40,
+        },
+        tooltipField: "finalDestination",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          const value = params.value;
+          if (value.length > 30) {
+            return `<span title="${value}">${value.substring(0, 27)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "finalDestination",
+            params.newValue || "",
+          );
+        },
+      },
+    ],
+  },
+
+  // Shipping Details Group
+  {
+    headerName: "Shipping Details",
+    children: [
+      {
+        field: "containerType",
+        headerName: "Container Type",
+        width: 140,
+        minWidth: 120,
+        filter: "agSetColumnFilter",
+        editable: true,
+        cellEditor: "agSelectCellEditor",
+        cellEditorParams: {
+          values: [
+            "20GP",
+            "40GP",
+            "40HC",
+            "45HC",
+            "20FR",
+            "40FR",
+            "20OT",
+            "40OT",
+            "20RF",
+            "40RF",
+          ],
+        },
+        tooltipField: "containerType",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          return `<span class="px-2 py-1 text-xs font-mono bg-blue-100 text-blue-800 rounded">${params.value}</span>`;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "containerType",
+            params.newValue || "",
+          );
+        },
+      },
+      {
+        field: "mbl",
+        headerName: "MBL",
+        width: 140,
+        minWidth: 100,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "mbl",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          return `<span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">${params.value}</span>`;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(params.data.id, "mbl", params.newValue || "");
+        },
+      },
+      {
+        field: "customs",
+        headerName: "Customs",
+        width: 150,
+        minWidth: 120,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "customs",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          const value = params.value;
+          if (value.length > 20) {
+            return `<span title="${value}">${value.substring(0, 17)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(params.data.id, "customs", params.newValue || "");
+        },
+      },
+    ],
+  },
+
+  // Financial Information Group
+  {
+    headerName: "Financial",
+    children: [
+      {
+        field: "invoiceAmount",
+        headerName: "Invoice Amount",
+        width: 130,
+        minWidth: 110,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "invoiceAmount",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          return `<span class="font-mono text-green-700">${params.value}</span>`;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "invoiceAmount",
+            params.newValue || "",
+          );
+        },
+      },
+      {
+        field: "cost",
+        headerName: "Cost",
+        width: 120,
+        minWidth: 100,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agTextCellEditor",
+        tooltipField: "cost",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">Not specified</span>';
+          return `<span class="font-mono text-orange-700">${params.value}</span>`;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(params.data.id, "cost", params.newValue || "");
+        },
+      },
+    ],
+  },
+
+  // Status Information Group
+  {
     headerName: "Status",
-    filter: "agSetColumnFilter",
-    maxWidth: 120,
-    cellRenderer: (params) => {
-      const statusMap = {
-        IN_TRANSIT: "In Transit",
-        DELIVERED: "Delivered",
-        PLANNED: "Planned",
-        UNKNOWN: "Unknown",
-      };
+    children: [
+      {
+        field: "customsProcessed",
+        headerName: "Customs ✓",
+        width: 110,
+        minWidth: 90,
+        filter: "agSetColumnFilter",
+        cellRenderer: (params) => {
+          const isProcessed = params.value === true;
+          const color = isProcessed ? "text-green-600" : "text-gray-400";
+          const icon = isProcessed ? "✓" : "○";
+          return `<span class="flex items-center justify-center ${color} font-bold text-lg">${icon}</span>`;
+        },
+        editable: true,
+        cellEditor: "agCheckboxCellEditor",
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "customsProcessed",
+            params.newValue === true,
+          );
+        },
+      },
+      {
+        field: "invoiced",
+        headerName: "Invoiced ✓",
+        width: 110,
+        minWidth: 90,
+        filter: "agSetColumnFilter",
+        cellRenderer: (params) => {
+          const isInvoiced = params.value === true;
+          const color = isInvoiced ? "text-green-600" : "text-gray-400";
+          const icon = isInvoiced ? "✓" : "○";
+          return `<span class="flex items-center justify-center ${color} font-bold text-lg">${icon}</span>`;
+        },
+        editable: true,
+        cellEditor: "agCheckboxCellEditor",
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "invoiced",
+            params.newValue === true,
+          );
+        },
+      },
+      {
+        field: "paymentReceived",
+        headerName: "Payment ✓",
+        width: 110,
+        minWidth: 90,
+        filter: "agSetColumnFilter",
+        cellRenderer: (params) => {
+          const isReceived = params.value === true;
+          const color = isReceived ? "text-green-600" : "text-gray-400";
+          const icon = isReceived ? "✓" : "○";
+          return `<span class="flex items-center justify-center ${color} font-bold text-lg">${icon}</span>`;
+        },
+        editable: true,
+        cellEditor: "agCheckboxCellEditor",
+        onCellValueChanged: (params) => {
+          updateShipmentField(
+            params.data.id,
+            "paymentReceived",
+            params.newValue === true,
+          );
+        },
+      },
+    ],
+  },
 
-      const status = statusMap[params.value] || "Unknown";
-      const statusClasses = {
-        "In Transit": "bg-blue-100 text-blue-800",
-        Delivered: "bg-green-100 text-green-800",
-        Planned: "bg-yellow-100 text-yellow-800",
-        Unknown: "bg-gray-100 text-gray-800",
-      };
-      const classes = statusClasses[status] || statusClasses["Unknown"];
-      return `<span class="px-2 py-1 text-xs font-semibold rounded-full ${classes}">${status}</span>`;
-    },
-  },
+  // Notes Group
   {
-    field: "originPort",
-    headerName: "Origin",
-    width: 200,
-    filter: "agTextColumnFilter",
-    cellRenderer: (params) => {
-      const pol = params.data?.route?.pol;
-      if (pol && pol.location) {
-        return `${pol.location.name} (${pol.location.locode})`;
-      }
-      return "N/A";
-    },
-  },
-  {
-    field: "destinationPort",
-    headerName: "Destination",
-    width: 200,
-    filter: "agTextColumnFilter",
-    cellRenderer: (params) => {
-      const pod = params.data?.route?.pod;
-      if (pod && pod.location) {
-        return `${pod.location.name} (${pod.location.locode})`;
-      }
-      return "N/A";
-    },
-  },
-  {
-    field: "vesselInfo",
-    headerName: "Vessel",
-    maxWidth: 180,
-    filter: "agSetColumnFilter",
-    cellRenderer: (params) => {
-      const vessels = params.data?.vessels;
-      if (vessels && vessels.length > 0) {
-        const vessel = vessels[0];
-        return `${vessel.name || "Unknown"} (${vessel.imo || "N/A"})`;
-      }
-      return "N/A";
-    },
-  },
-  {
-    field: "containerCount",
-    headerName: "Containers",
-    maxWidth: 120,
-    cellRenderer: (params) => {
-      const containers = params.data?.containers;
-      if (containers && containers.length > 0) {
-        return containers.length.toString();
-      }
-      return "0";
-    },
-  },
-  {
-    field: "nextETA",
-    headerName: "Next ETA",
-    width: 120,
-    filter: "agDateColumnFilter",
-    cellRenderer: (params) => {
-      const route = params.data?.route;
-      if (!route) return "N/A";
-
-      // Find next port with a future date
-      const ports = [route.prepol, route.pol, route.pod, route.postpod].filter(
-        Boolean,
-      );
-      const now = new Date();
-
-      for (const port of ports) {
-        if (port.date && new Date(port.date) > now) {
-          const date = new Date(port.date);
-          return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
-        }
-      }
-
-      return "N/A";
-    },
-  },
-  {
-    field: "recipient",
-    headerName: "Recipient",
-    width: 150,
-    filter: "agTextColumnFilter",
-    editable: true,
-    cellEditor: "agTextCellEditor",
-    tooltipField: "recipient",
-    cellRenderer: (params) => {
-      if (!params.value)
-        return '<span class="text-gray-400 italic">Not specified</span>';
-      const value = params.value;
-      if (value.length > 20) {
-        return `<span title="${value}">${value.substring(0, 17)}...</span>`;
-      }
-      return value;
-    },
-    onCellValueChanged: (params) => {
-      updateShipmentField(params.data.id, "recipient", params.newValue || "");
-    },
-  },
-  {
-    field: "address",
-    headerName: "Address",
-    width: 200,
-    filter: "agTextColumnFilter",
-    editable: true,
-    cellEditor: "agTextCellEditor",
-    tooltipField: "address",
-    cellRenderer: (params) => {
-      if (!params.value)
-        return '<span class="text-gray-400 italic">Not specified</span>';
-      const value = params.value;
-      if (value.length > 30) {
-        return `<span title="${value}">${value.substring(0, 27)}...</span>`;
-      }
-      return value;
-    },
-    onCellValueChanged: (params) => {
-      updateShipmentField(params.data.id, "address", params.newValue || "");
-    },
-  },
-  {
-    field: "notes",
     headerName: "Notes",
-    width: 200,
-    filter: "agTextColumnFilter",
-    editable: true,
-    cellEditor: "agLargeTextCellEditor",
-    cellEditorParams: {
-      maxLength: 2000,
-      rows: 4,
-      cols: 50,
-    },
-    tooltipField: "notes",
-    cellRenderer: (params) => {
-      if (!params.value)
-        return '<span class="text-gray-400 italic">No notes</span>';
-      const value = params.value;
-      if (value.length > 50) {
-        return `<span title="${value}" class="cursor-help">${value.substring(0, 47)}...</span>`;
-      }
-      return value;
-    },
-    onCellValueChanged: (params) => {
-      updateShipmentField(params.data.id, "notes", params.newValue || "");
-    },
+    children: [
+      {
+        field: "notes",
+        headerName: "Notes",
+        width: 250,
+        minWidth: 150,
+        filter: "agTextColumnFilter",
+        editable: true,
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+          maxLength: 2000,
+          rows: 4,
+          cols: 50,
+        },
+        tooltipField: "notes",
+        cellRenderer: (params) => {
+          if (!params.value)
+            return '<span class="text-gray-400 italic">No notes</span>';
+          const value = params.value;
+          if (value.length > 50) {
+            return `<span title="${value}" class="cursor-help">${value.substring(0, 47)}...</span>`;
+          }
+          return value;
+        },
+        onCellValueChanged: (params) => {
+          updateShipmentField(params.data.id, "notes", params.newValue || "");
+        },
+      },
+    ],
   },
+
+  // Actions (ungrouped, pinned right)
   {
     field: "actions",
     headerName: "Actions",
     width: 100,
+    minWidth: 80,
     pinned: "right",
     sortable: false,
     resizable: false,
@@ -221,25 +614,81 @@ const gridOptions = {
   columnDefs,
 
   defaultColDef: {
-    suppressHeaderMenuButton: true,
+    suppressHeaderMenuButton: false,
     resizable: true,
     sortable: true,
-    // filter: true,
-    // suppressHeaderFilterButton: true,
+    filter: true,
+    suppressHeaderFilterButton: false,
+    menuTabs: ["filterMenuTab", "generalMenuTab", "columnsMenuTab"],
+    minWidth: 120, // Minimum width for readability
   },
   rowSelection,
   pagination: true,
-  paginationPageSize: 15, // Reduced due to richer data per row
-  paginationPageSizeSelector: [15, 25, 50],
+  paginationPageSize: 20, // Increased due to more columns
+  paginationPageSizeSelector: [20, 50, 100],
 
   // Performance optimizations for richer data
-  rowBuffer: 10,
+  rowBuffer: 15,
   suppressCellFocus: true,
   animateRows: true,
 
-  // Handle large datasets better
+  // Handle large datasets better with many columns
   suppressColumnVirtualisation: false,
   suppressRowVirtualisation: false,
+
+  // Ensure horizontal scrolling is enabled
+  suppressHorizontalScroll: false,
+
+  // Prevent auto-sizing to viewport width
+  suppressSizeToFit: true,
+
+  // Allow columns to maintain their natural widths
+  enableColResize: true,
+  // Column management
+  sideBar: {
+    toolPanels: [
+      {
+        id: "columns",
+        labelDefault: "Columns",
+        labelKey: "columns",
+        iconKey: "columns",
+        toolPanel: "agColumnsToolPanel",
+        toolPanelParams: {
+          suppressRowGroups: true,
+          suppressValues: true,
+          suppressPivots: true,
+          suppressPivotMode: true,
+          suppressColumnFilter: false,
+          suppressColumnSelectAll: false,
+          suppressColumnExpandAll: false,
+        },
+      },
+      {
+        id: "filters",
+        labelDefault: "Filters",
+        labelKey: "filters",
+        iconKey: "filter",
+        toolPanel: "agFiltersToolPanel",
+      },
+    ],
+    defaultToolPanel: "columns",
+  },
+
+  // Enable horizontal scrolling - don't auto-size columns
+  onFirstDataRendered: (params) => {
+    // Hide some columns by default to reduce initial width but keep essential ones visible
+    const columnsToHide = [
+      "customs",
+      "mbl",
+      "placeOfLoading",
+      "placeOfDelivery",
+      "containerType",
+    ];
+    params.api.setColumnsVisible(columnsToHide, false);
+
+    // Ensure horizontal scrolling is enabled by NOT auto-sizing columns
+    // This allows columns to maintain their defined widths
+  },
 
   onGridReady: (event) => {
     event.api.setFilterModel({
@@ -348,8 +797,28 @@ function updateShipmentField(shipmentId, field, value) {
     return;
   }
 
+  // Map field names from ag-grid to API expectations if needed
+  const fieldMapping = {
+    // Most fields use the same name, but we can add exceptions here if needed
+    // Example: "gridFieldName": "apiFieldName"
+  };
+
+  const apiField = fieldMapping[field] || field;
   const payload = {};
-  payload[field] = value || "";
+
+  // Handle different field types properly
+  if (typeof value === "boolean") {
+    payload[apiField] = value;
+  } else if (value === null || value === undefined) {
+    payload[apiField] = "";
+  } else {
+    payload[apiField] = String(value).trim();
+  }
+
+  console.log(
+    `Updating ${apiField} for shipment ${shipmentId} with value:`,
+    payload[apiField],
+  );
 
   fetch(`/api/shipments/${shipmentId}/update-info`, {
     method: "PATCH",
@@ -370,7 +839,9 @@ function updateShipmentField(shipmentId, field, value) {
         // You could add toast notification here if available
         // showToast("Error: " + data.error, "error");
       } else {
-        console.log(`Successfully updated ${field} for shipment ${shipmentId}`);
+        console.log(
+          `Successfully updated ${apiField} for shipment ${shipmentId}`,
+        );
         // You could add success toast notification here if available
         // showToast(`${field} updated successfully`, "success");
       }

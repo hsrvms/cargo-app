@@ -51,11 +51,27 @@ func (s *shipmentService) AddShipment(
 			return nil, err
 		}
 
-		// Update shipment with new recipient, address, notes if provided
-		if req.Recipient != "" || req.Address != "" || req.Notes != "" {
+		// Update shipment with new fields if provided
+		if req.Consignee != "" || req.Recipient != "" || req.AssignedTo != "" ||
+			req.PlaceOfLoading != "" || req.PlaceOfDelivery != "" || req.FinalDestination != "" ||
+			req.ContainerType != "" || req.Shipper != "" || req.InvoiceAmount != "" ||
+			req.Cost != "" || req.Customs != "" || req.MBL != "" || req.Notes != "" {
+			existingShipment.Consignee = req.Consignee
 			existingShipment.Recipient = req.Recipient
-			existingShipment.Address = req.Address
+			existingShipment.AssignedTo = req.AssignedTo
+			existingShipment.PlaceOfLoading = req.PlaceOfLoading
+			existingShipment.PlaceOfDelivery = req.PlaceOfDelivery
+			existingShipment.FinalDestination = req.FinalDestination
+			existingShipment.ContainerType = req.ContainerType
+			existingShipment.Shipper = req.Shipper
+			existingShipment.InvoiceAmount = req.InvoiceAmount
+			existingShipment.Cost = req.Cost
+			existingShipment.Customs = req.Customs
+			existingShipment.MBL = req.MBL
 			existingShipment.Notes = req.Notes
+			existingShipment.CustomsProcessed = req.CustomsProcessed
+			existingShipment.Invoiced = req.Invoiced
+			existingShipment.PaymentReceived = req.PaymentReceived
 			_, err = s.repo.UpdateShipment(ctx, existingShipment.ID, existingShipment)
 			if err != nil {
 				return nil, err
@@ -103,9 +119,22 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 	}
 
 	// Set the shipment info fields
+	shipmentModel.Consignee = req.Consignee
 	shipmentModel.Recipient = req.Recipient
-	shipmentModel.Address = req.Address
+	shipmentModel.AssignedTo = req.AssignedTo
+	shipmentModel.PlaceOfLoading = req.PlaceOfLoading
+	shipmentModel.PlaceOfDelivery = req.PlaceOfDelivery
+	shipmentModel.FinalDestination = req.FinalDestination
+	shipmentModel.ContainerType = req.ContainerType
+	shipmentModel.Shipper = req.Shipper
+	shipmentModel.InvoiceAmount = req.InvoiceAmount
+	shipmentModel.Cost = req.Cost
+	shipmentModel.Customs = req.Customs
+	shipmentModel.MBL = req.MBL
 	shipmentModel.Notes = req.Notes
+	shipmentModel.CustomsProcessed = req.CustomsProcessed
+	shipmentModel.Invoiced = req.Invoiced
+	shipmentModel.PaymentReceived = req.PaymentReceived
 
 	shipment, err := s.repo.CreateShipment(ctx, userID, shipmentModel)
 	if err != nil {
@@ -1143,7 +1172,7 @@ func (s *shipmentService) GetShipmentDetails(ctx context.Context, userID, shipme
 	return shipmentDetails, nil
 }
 
-func (s *shipmentService) UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+func (s *shipmentService) UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error {
 	owns, err := s.repo.CheckUserOwnsShipment(ctx, userID, shipmentID)
 	if err != nil {
 		return err
@@ -1152,7 +1181,7 @@ func (s *shipmentService) UpdateShipmentInfo(ctx context.Context, userID, shipme
 		return fmt.Errorf("shipment not found or access denied")
 	}
 
-	return s.repo.UpdateShipmentInfo(ctx, userID, shipmentID, recipient, address, notes)
+	return s.repo.UpdateShipmentInfo(ctx, userID, shipmentID, req)
 }
 
 func (s *shipmentService) DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error {

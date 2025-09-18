@@ -7,23 +7,39 @@ import (
 )
 
 type ShipmentDetailsResponse struct {
-	ID             uuid.UUID                   `json:"id"`
-	ShipmentType   string                      `json:"shipmentType"`
-	ShipmentNumber string                      `json:"shipmentNumber"`
-	SealineCode    string                      `json:"sealineCode"`
-	SealineName    string                      `json:"sealineName"`
-	ShippingStatus string                      `json:"shippingStatus"`
-	CreatedAt      time.Time                   `json:"createdAt"`
-	UpdatedAt      time.Time                   `json:"updatedAt"`
-	Recipient      string                      `json:"recipient"`
-	Address        string                      `json:"address"`
-	Notes          string                      `json:"notes"`
-	Locations      []ShipmentLocationResponse  `json:"locations"`
-	Route          ShipmentRouteResponse       `json:"route"`
-	Vessels        []ShipmentVesselResponse    `json:"vessels"`
-	Facilities     []ShipmentFacilityResponse  `json:"facilities"`
-	Containers     []ShipmentContainerResponse `json:"containers"`
-	RouteData      ShipmentRouteDataResponse   `json:"routeData"`
+	ID             uuid.UUID `json:"id"`
+	ShipmentType   string    `json:"shipmentType"`
+	ShipmentNumber string    `json:"shipmentNumber"`
+	SealineCode    string    `json:"sealineCode"`
+	SealineName    string    `json:"sealineName"`
+	ShippingStatus string    `json:"shippingStatus"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+	// Shipment Information Fields
+	Consignee        string `json:"consignee"`
+	Recipient        string `json:"recipient"`
+	AssignedTo       string `json:"assignedTo"`
+	PlaceOfLoading   string `json:"placeOfLoading"`
+	PlaceOfDelivery  string `json:"placeOfDelivery"`
+	FinalDestination string `json:"finalDestination"`
+	ContainerType    string `json:"containerType"`
+	Shipper          string `json:"shipper"`
+	InvoiceAmount    string `json:"invoiceAmount"`
+	Cost             string `json:"cost"`
+	Customs          string `json:"customs"`
+	MBL              string `json:"mbl"`
+	Notes            string `json:"notes"`
+
+	// Boolean Fields
+	CustomsProcessed bool                        `json:"customsProcessed"`
+	Invoiced         bool                        `json:"invoiced"`
+	PaymentReceived  bool                        `json:"paymentReceived"`
+	Locations        []ShipmentLocationResponse  `json:"locations"`
+	Route            ShipmentRouteResponse       `json:"route"`
+	Vessels          []ShipmentVesselResponse    `json:"vessels"`
+	Facilities       []ShipmentFacilityResponse  `json:"facilities"`
+	Containers       []ShipmentContainerResponse `json:"containers"`
+	RouteData        ShipmentRouteDataResponse   `json:"routeData"`
 }
 
 type ShipmentLocationResponse struct {

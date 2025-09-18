@@ -52,7 +52,7 @@ type ShipmentRepository interface {
 	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
 
 	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
-	UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error
+	UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error
 
 	DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error
 	DeleteShipmentRoutes(ctx context.Context, shipmentID uuid.UUID) error
@@ -643,23 +643,36 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 	}
 
 	return &dto.ShipmentDetailsResponse{
-		ID:             shipment.ID,
-		ShipmentType:   shipment.ShipmentType,
-		ShipmentNumber: shipment.ShipmentNumber,
-		SealineCode:    shipment.SealineCode,
-		SealineName:    shipment.SealineName,
-		ShippingStatus: shipment.ShippingStatus,
-		CreatedAt:      shipment.CreatedAt,
-		UpdatedAt:      shipment.UpdatedAt,
-		Recipient:      shipment.Recipient,
-		Address:        shipment.Address,
-		Notes:          shipment.Notes,
-		Locations:      locations,
-		Route:          route,
-		Vessels:        vessels,
-		Facilities:     facilities,
-		Containers:     containers,
-		RouteData:      routeData,
+		ID:               shipment.ID,
+		ShipmentType:     shipment.ShipmentType,
+		ShipmentNumber:   shipment.ShipmentNumber,
+		SealineCode:      shipment.SealineCode,
+		SealineName:      shipment.SealineName,
+		ShippingStatus:   shipment.ShippingStatus,
+		CreatedAt:        shipment.CreatedAt,
+		UpdatedAt:        shipment.UpdatedAt,
+		Consignee:        shipment.Consignee,
+		Recipient:        shipment.Recipient,
+		AssignedTo:       shipment.AssignedTo,
+		PlaceOfLoading:   shipment.PlaceOfLoading,
+		PlaceOfDelivery:  shipment.PlaceOfDelivery,
+		FinalDestination: shipment.FinalDestination,
+		ContainerType:    shipment.ContainerType,
+		Shipper:          shipment.Shipper,
+		InvoiceAmount:    shipment.InvoiceAmount,
+		Cost:             shipment.Cost,
+		Customs:          shipment.Customs,
+		MBL:              shipment.MBL,
+		Notes:            shipment.Notes,
+		CustomsProcessed: shipment.CustomsProcessed,
+		Invoiced:         shipment.Invoiced,
+		PaymentReceived:  shipment.PaymentReceived,
+		Locations:        locations,
+		Route:            route,
+		Vessels:          vessels,
+		Facilities:       facilities,
+		Containers:       containers,
+		RouteData:        routeData,
 	}, nil
 }
 
@@ -1319,20 +1332,33 @@ func (r *shipmentRepository) GetShipmentsForGrid(ctx context.Context, userID uui
 	return shipments, nil
 }
 
-func (r *shipmentRepository) UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, recipient, address, notes string) error {
+func (r *shipmentRepository) UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error {
 	db := r.db.DB.WithContext(ctx)
 
 	result := db.Model(&models.Shipment{}).
 		Where("id = ?", shipmentID).
 		Updates(map[string]interface{}{
-			"recipient":  recipient,
-			"address":    address,
-			"notes":      notes,
-			"updated_at": time.Now(),
+			"consignee":         req.Consignee,
+			"recipient":         req.Recipient,
+			"assigned_to":       req.AssignedTo,
+			"place_of_loading":  req.PlaceOfLoading,
+			"place_of_delivery": req.PlaceOfDelivery,
+			"final_destination": req.FinalDestination,
+			"container_type":    req.ContainerType,
+			"shipper":           req.Shipper,
+			"invoice_amount":    req.InvoiceAmount,
+			"cost":              req.Cost,
+			"customs":           req.Customs,
+			"mbl":               req.MBL,
+			"notes":             req.Notes,
+			"customs_processed": req.CustomsProcessed,
+			"invoiced":          req.Invoiced,
+			"payment_received":  req.PaymentReceived,
+			"updated_at":        time.Now(),
 		})
 
 	if result.Error != nil {
-		return fmt.Errorf("failed to update user shipment info: %w", result.Error)
+		return fmt.Errorf("failed to update shipment info: %w", result.Error)
 	}
 
 	if result.RowsAffected == 0 {
