@@ -13,10 +13,6 @@ const rowSelection = {
   // enableClickSelection: false,
 };
 
-// TODO:
-// Correct Checkboxes
-// Remove filter buttons on some columns
-// Test it if its working correctly
 const columnDefs = [
   {
     field: "shipmentNumber",
@@ -511,6 +507,7 @@ const columnDefs = [
   {
     field: "actions",
     headerName: "Actions",
+    pinned: "right",
     width: 100,
     minWidth: 80,
     sortable: false,
@@ -586,7 +583,7 @@ const gridOptions = {
         toolPanel: "agFiltersToolPanel",
       },
     ],
-    defaultToolPanel: "columns",
+    // defaultToolPanel: "columns",
   },
 
   // Enable horizontal scrolling - don't auto-size columns
