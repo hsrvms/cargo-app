@@ -133,10 +133,10 @@ class FilterManager {
   async handleSaveFilter() {
     const filterState = this.getCurrentFilterState();
 
-    if (filterState.activeFilterCount === 0) {
-      this.showToast("No filters to save. Apply some filters first.", "info");
-      return;
-    }
+    // if (filterState.activeFilterCount === 0) {
+    //   this.showToast("No filters to save. Apply some filters first.", "info");
+    //   return;
+    // }
 
     const name = await this.promptForFilterName();
     if (!name) return;
