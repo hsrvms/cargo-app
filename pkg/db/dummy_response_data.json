@@ -1,0 +1,532 @@
+{
+    "metadata": {
+        "shipmentType": "CT",
+        "shipmentNumber": "MSKU0496560",
+        "sealine": "MAEU",
+        "sealineName": "Maersk",
+        "shippingStatus": "IN_TRANSIT",
+        "updatedAt": "2023-11-28T11:24:59Z"
+    },
+    "locations": [
+        {
+            "name": "Houston",
+            "state": "Texas",
+            "country": "United States",
+            "countryCode": "US",
+            "locode": "USHOU",
+            "coordinates": {
+                "lat": 29.76328,
+                "lng": -95.36327
+            },
+            "timezone": "America/Chicago"
+        },
+        {
+            "name": "Bremerhaven",
+            "state": "Bremen",
+            "country": "Germany",
+            "countryCode": "DE",
+            "locode": "DEBRV",
+            "coordinates": {
+                "lat": 53.53615,
+                "lng": 8.59298
+            },
+            "timezone": "Europe/Berlin"
+        }
+    ],
+    "route": {
+        "prepol": {
+            "location": {
+                "name": "Houston",
+                "state": "Texas",
+                "country": "United States",
+                "countryCode": "US",
+                "locode": "USHOU",
+                "coordinates": {
+                    "lat": 29.76328,
+                    "lng": -95.36327
+                },
+                "timezone": "America/Chicago"
+            },
+            "date": "2023-11-07T11:16:00Z",
+            "actual": true,
+            "predictiveEta": null
+        },
+        "pol": {
+            "location": {
+                "name": "Houston",
+                "state": "Texas",
+                "country": "United States",
+                "countryCode": "US",
+                "locode": "USHOU",
+                "coordinates": {
+                    "lat": 29.76328,
+                    "lng": -95.36327
+                },
+                "timezone": "America/Chicago"
+            },
+            "date": "2023-11-07T12:46:00Z",
+            "actual": true,
+            "predictiveEta": null
+        },
+        "pod": {
+            "location": {
+                "name": "Bremerhaven",
+                "state": "Bremen",
+                "country": "Germany",
+                "countryCode": "DE",
+                "locode": "DEBRV",
+                "coordinates": {
+                    "lat": 53.53615,
+                    "lng": 8.59298
+                },
+                "timezone": "Europe/Berlin"
+            },
+            "date": "2023-12-01T22:00:00Z",
+            "actual": false,
+            "predictiveEta": null
+        },
+        "postpod": {
+            "location": {
+                "name": "Bremerhaven",
+                "state": "Bremen",
+                "country": "Germany",
+                "countryCode": "DE",
+                "locode": "DEBRV",
+                "coordinates": {
+                    "lat": 53.53615,
+                    "lng": 8.59298
+                },
+                "timezone": "Europe/Berlin"
+            },
+            "date": "2023-12-01T22:00:00Z",
+            "actual": false,
+            "predictiveEta": null
+        }
+    },
+    "vessels": [
+        {
+            "name": "MAERSK OHIO",
+            "imo": 9298698,
+            "callSign": "KABP",
+            "mmsi": 367775000,
+            "flag": "US"
+        }
+    ],
+    "facilities": [
+        {
+            "name": "Houston Barbours Cut Terminal",
+            "countryCode": "US",
+            "locode": "USUQF",
+            "bicCode": "USUQFGDQQ",
+            "smdgCode": null,
+            "coordinates": {
+                "lat": null,
+                "lng": null
+            }
+        },
+        {
+            "name": "MSC Gate Bremerhaven Gmbh & Co. KG",
+            "countryCode": "DE",
+            "locode": null,
+            "bicCode": null,
+            "smdgCode": null,
+            "coordinates": {
+                "lat": null,
+                "lng": null
+            }
+        }
+    ],
+    "containers": [
+        {
+            "number": "MSKU0496560",
+            "isoCode": "45G1",
+            "sizeType": "40' High Cube Dry",
+            "status": "IN_TRANSIT",
+            "events": [
+                {
+                    "location": {
+                        "name": "Houston",
+                        "state": "Texas",
+                        "country": "United States",
+                        "countryCode": "US",
+                        "locode": "USHOU",
+                        "coordinates": {
+                            "lat": 29.76328,
+                            "lng": -95.36327
+                        },
+                        "timezone": "America/Chicago"
+                    },
+                    "facility": {
+                        "name": "Houston Barbours Cut Terminal",
+                        "countryCode": "US",
+                        "locode": "USUQF",
+                        "bicCode": "USUQFGDQQ",
+                        "smdgCode": null,
+                        "coordinates": {
+                            "lat": null,
+                            "lng": null
+                        }
+                    },
+                    "description": "Gate out",
+                    "eventType": "EQUIPMENT",
+                    "eventCode": "GTOT",
+                    "status": "CEP",
+                    "date": "2023-11-07T11:16:00Z",
+                    "isActual": true,
+                    "isAdditionalEvent": false,
+                    "routeType": "LAND",
+                    "transportType": null,
+                    "vessel": null,
+                    "voyage": null
+                },
+                {
+                    "location": {
+                        "name": "Houston",
+                        "state": "Texas",
+                        "country": "United States",
+                        "countryCode": "US",
+                        "locode": "USHOU",
+                        "coordinates": {
+                            "lat": 29.76328,
+                            "lng": -95.36327
+                        },
+                        "timezone": "America/Chicago"
+                    },
+                    "facility": null,
+                    "description": "Gate in",
+                    "eventType": "EQUIPMENT",
+                    "eventCode": "GTIN",
+                    "status": "CGI",
+                    "date": "2023-11-07T12:46:00Z",
+                    "isActual": true,
+                    "isAdditionalEvent": false,
+                    "routeType": "LAND",
+                    "transportType": null,
+                    "vessel": null,
+                    "voyage": null
+                },
+                {
+                    "location": {
+                        "name": "Houston",
+                        "state": "Texas",
+                        "country": "United States",
+                        "countryCode": "US",
+                        "locode": "USHOU",
+                        "coordinates": {
+                            "lat": 29.76328,
+                            "lng": -95.36327
+                        },
+                        "timezone": "America/Chicago"
+                    },
+                    "facility": null,
+                    "description": "Load",
+                    "eventType": "EQUIPMENT",
+                    "eventCode": "LOAD",
+                    "status": "CLL",
+                    "date": "2023-11-11T04:57:00Z",
+                    "isActual": true,
+                    "isAdditionalEvent": false,
+                    "routeType": "SEA",
+                    "transportType": null,
+                    "vessel": {
+                        "name": "MAERSK OHIO",
+                        "imo": 9298698,
+                        "callSign": "KABP",
+                        "mmsi": 367775000,
+                        "flag": "US"
+                    },
+                    "voyage": "344E"
+                },
+                {
+                    "location": {
+                        "name": "Houston",
+                        "state": "Texas",
+                        "country": "United States",
+                        "countryCode": "US",
+                        "locode": "USHOU",
+                        "coordinates": {
+                            "lat": 29.76328,
+                            "lng": -95.36327
+                        },
+                        "timezone": "America/Chicago"
+                    },
+                    "facility": null,
+                    "description": "Vessel departure",
+                    "eventType": "TRANSPORT",
+                    "eventCode": "DEPA",
+                    "status": "VDL",
+                    "date": "2023-11-11T07:09:00Z",
+                    "isActual": true,
+                    "isAdditionalEvent": false,
+                    "routeType": "SEA",
+                    "transportType": "VESSEL",
+                    "vessel": {
+                        "name": "MAERSK OHIO",
+                        "imo": 9298698,
+                        "callSign": "KABP",
+                        "mmsi": 367775000,
+                        "flag": "US"
+                    },
+                    "voyage": "344E"
+                },
+                {
+                    "location": {
+                        "name": "Bremerhaven",
+                        "state": "Bremen",
+                        "country": "Germany",
+                        "countryCode": "DE",
+                        "locode": "DEBRV",
+                        "coordinates": {
+                            "lat": 53.53615,
+                            "lng": 8.59298
+                        },
+                        "timezone": "Europe/Berlin"
+                    },
+                    "facility": {
+                        "name": "MSC Gate Bremerhaven Gmbh & Co. KG",
+                        "countryCode": "DE",
+                        "locode": null,
+                        "bicCode": null,
+                        "smdgCode": null,
+                        "coordinates": {
+                            "lat": null,
+                            "lng": null
+                        }
+                    },
+                    "description": "Vessel arrival",
+                    "eventType": "TRANSPORT",
+                    "eventCode": "ARRI",
+                    "status": "VAD",
+                    "date": "2023-12-01T22:00:00Z",
+                    "isActual": false,
+                    "isAdditionalEvent": false,
+                    "routeType": "SEA",
+                    "transportType": "VESSEL",
+                    "vessel": {
+                        "name": "MAERSK OHIO",
+                        "imo": 9298698,
+                        "callSign": "KABP",
+                        "mmsi": 367775000,
+                        "flag": "US"
+                    },
+                    "voyage": "344E"
+                }
+            ]
+        }
+    ],
+    "routeData": {
+        "routeSegments": [
+            {
+                "path": [
+                    {
+                        "lat": 29.76328,
+                        "lng": -95.36327
+                    },
+                    {
+                        "lat": 29.75212,
+                        "lng": -95.30827
+                    },
+                    {
+                        "lat": 29.700035,
+                        "lng": -95.05164
+                    },
+                    {
+                        "lat": 29.688875,
+                        "lng": -94.99665
+                    },
+                    {
+                        "lat": 29.69268,
+                        "lng": -94.99588
+                    },
+                    {
+                        "lat": 29.710443,
+                        "lng": -94.99227
+                    },
+                    {
+                        "lat": 29.71425,
+                        "lng": -94.9915
+                    },
+                    {
+                        "lat": 29.661234,
+                        "lng": -94.9585
+                    },
+                    {
+                        "lat": 29.413822,
+                        "lng": -94.8045
+                    },
+                    {
+                        "lat": 29.360806,
+                        "lng": -94.7715
+                    },
+                    {
+                        "lat": 28.69987,
+                        "lng": -92.64078
+                    },
+                    {
+                        "lat": 25.615494,
+                        "lng": -82.697395
+                    },
+                    {
+                        "lat": 24.954556,
+                        "lng": -80.566666
+                    },
+                    {
+                        "lat": 25.089743,
+                        "lng": -80.05885
+                    },
+                    {
+                        "lat": 25.72062,
+                        "lng": -77.689064
+                    },
+                    {
+                        "lat": 25.855806,
+                        "lng": -77.18125
+                    },
+                    {
+                        "lat": 29.65043,
+                        "lng": -65.394936
+                    },
+                    {
+                        "lat": 47.08643,
+                        "lng": -11.237754
+                    },
+                    {
+                        "lat": 47.35868,
+                        "lng": -10.392122
+                    },
+                    {
+                        "lat": 51.153305,
+                        "lng": 1.394194
+                    },
+                    {
+                        "lat": 51.42554,
+                        "lng": 1.9012278
+                    },
+                    {
+                        "lat": 52.695972,
+                        "lng": 4.267386
+                    },
+                    {
+                        "lat": 52.96821,
+                        "lng": 4.77442
+                    },
+                    {
+                        "lat": 53.032413,
+                        "lng": 4.9400067
+                    },
+                    {
+                        "lat": 53.332043,
+                        "lng": 5.712746
+                    },
+                    {
+                        "lat": 53.39625,
+                        "lng": 5.878333
+                    },
+                    {
+                        "lat": 53.439404,
+                        "lng": 6.111904
+                    },
+                    {
+                        "lat": 53.640785,
+                        "lng": 7.201904
+                    },
+                    {
+                        "lat": 53.68394,
+                        "lng": 7.435475
+                    },
+                    {
+                        "lat": 53.685673,
+                        "lng": 7.4788346
+                    },
+                    {
+                        "lat": 53.693768,
+                        "lng": 7.681179
+                    },
+                    {
+                        "lat": 53.695503,
+                        "lng": 7.7245383
+                    },
+                    {
+                        "lat": 53.665535,
+                        "lng": 7.8185787
+                    },
+                    {
+                        "lat": 53.52569,
+                        "lng": 8.257433
+                    },
+                    {
+                        "lat": 53.49572,
+                        "lng": 8.351473
+                    },
+                    {
+                        "lat": 53.51669,
+                        "lng": 8.365631
+                    },
+                    {
+                        "lat": 53.614532,
+                        "lng": 8.431703
+                    },
+                    {
+                        "lat": 53.635498,
+                        "lng": 8.445861
+                    },
+                    {
+                        "lat": 53.620594,
+                        "lng": 8.467929
+                    },
+                    {
+                        "lat": 53.551052,
+                        "lng": 8.570912
+                    },
+                    {
+                        "lat": 53.53615,
+                        "lng": 8.59298
+                    }
+                ],
+                "routeType": "SEA"
+            }
+        ],
+        "coordinates": {
+            "lat": 47.08643,
+            "lng": -11.237754
+        },
+        "ais": {
+            "status": "OK",
+            "data": {
+                "lastEvent": {
+                    "description": "Vessel departure",
+                    "date": "2023-11-11T07:09:00Z",
+                    "voyage": "344E"
+                },
+                "dischargePort": null,
+                "vessel": {
+                    "name": "MAERSK OHIO",
+                    "imo": 9298698,
+                    "callSign": "KABP",
+                    "mmsi": 367775000,
+                    "flag": "US"
+                },
+                "lastVesselPosition": {
+                    "lat": 51.28157,
+                    "lng": 4.253457,
+                    "updatedAt": "2023-11-28T10:28:00Z"
+                },
+                "departurePort": {
+                    "name": "Bremerhaven",
+                    "countryCode": "DE",
+                    "code": "BRV",
+                    "date": "2023-12-01T22:00:00Z",
+                    "dateLabel": "ETA"
+                },
+                "arrivalPort": {
+                    "name": null,
+                    "countryCode": "BE",
+                    "code": "ANR",
+                    "date": "2023-11-27T13:02:00Z",
+                    "dateLabel": "ATA"
+                },
+                "updatedAt": "2023-11-28T10:34:39Z"
+            }
+        }
+    }
+}

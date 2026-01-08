@@ -10,8 +10,55 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 )
+
+type mockSafeCubeAPIService struct {
+	dummyFilePath string
+}
+
+func NewMockSafeCubeAPIService(filePath string) SafeCubeAPIService {
+	return &mockSafeCubeAPIService{
+		dummyFilePath: filePath,
+	}
+}
+
+func (m *mockSafeCubeAPIService) GetShipmentDetails(
+	ctx context.Context,
+	shipmentNumber string,
+	shipmentType string,
+	sealine string,
+) (*shipmentsDto.SafeCubeAPIShipmentResponse, error) {
+	log.Printf("Mock SafeCube API: Reading dummy data from %s for shipment %s", m.dummyFilePath, shipmentNumber)
+
+	jsonFile, err := os.Open(m.dummyFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open dummy data file: %w", err)
+	}
+	defer jsonFile.Close()
+
+	byteValue, err := io.ReadAll(jsonFile)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read dummy data file: %w", err)
+	}
+
+	var response shipmentsDto.SafeCubeAPIShipmentResponse
+	err = json.Unmarshal(byteValue, &response)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal dummy JSON: %w", err)
+	}
+
+	response.Metadata.ShipmentNumber = shipmentNumber
+	if shipmentType != "" {
+		response.Metadata.ShipmentType = shipmentType
+	}
+	if sealine != "" {
+		response.Metadata.Sealine = sealine
+	}
+
+	return &response, nil
+}
 
 type safeCubeAPIService struct {
 	httpClient  *http.Client

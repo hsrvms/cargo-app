@@ -9,6 +9,8 @@ import (
 	"go-starter/pkg/config"
 	"go-starter/pkg/db"
 	"go-starter/pkg/ratelimiter"
+	"log"
+	"os"
 
 	"github.com/labstack/echo/v4"
 )
@@ -17,13 +19,22 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	jwtService := authServices.NewJWTService()
 
 	// Create rate limiter for SafeCube API
-	rateLimiter := ratelimiter.NewSafeCubeAPIRateLimiter()
 
-	safeCubeAPIService := shipmentServices.NewSafeCubeAPIService(
-		cfg.SafeCubeAPI.BaseURL,
-		cfg.SafeCubeAPI.APIKey,
-		rateLimiter,
-	)
+	var safeCubeAPIService shipmentServices.SafeCubeAPIService
+
+	if os.Getenv("USE_DUMMY_API") == "true" {
+		safeCubeAPIService = shipmentServices.NewMockSafeCubeAPIService("pkg/db/dummy_response_data.json")
+		log.Println("⚠️ USING MOCK SAFECUBE API")
+	} else {
+		rateLimiter := ratelimiter.NewSafeCubeAPIRateLimiter()
+		safeCubeAPIService = shipmentServices.NewSafeCubeAPIService(
+			cfg.SafeCubeAPI.BaseURL,
+			cfg.SafeCubeAPI.APIKey,
+			rateLimiter,
+		)
+
+	}
+
 	shipmentRepository := shipmentRespositories.NewShipmentRepository(database)
 	shipmentService := shipmentServices.NewShipmentService(shipmentRepository, safeCubeAPIService)
 	shipmentAPIHandler := handlers.NewShipmentAPIHandler(shipmentService, safeCubeAPIService)
