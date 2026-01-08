@@ -1,9 +1,9 @@
 services:
   app:
-    #image: 954222311757.dkr.ecr.eu-central-1.amazonaws.com/cargoapp_main:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: 954222311757.dkr.ecr.eu-central-1.amazonaws.com/cargoapp_main:latest
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     user: "${UID}:${GID}"
     ports:
       - "8080:8080"
