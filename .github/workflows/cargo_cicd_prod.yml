@@ -8,7 +8,7 @@ on:
 env:
   # Genel
   AWS_REGION: ca-central-1
-  ECR_REGISTRY: 222634359755.dkr.ecr.eu-central-1.amazonaws.com
+  ECR_REGISTRY: 954222311757.dkr.ecr.ca-central-1.amazonaws.com
   ECR_REPOSITORY: cargoapp_main
   IMAGE_TAG: latest
 
@@ -31,8 +31,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CARGO }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CARGO }}
           aws-region: ca-central-1
 
       - name: Login to Amazon ECR
@@ -60,7 +60,7 @@ jobs:
             cd /home/ubuntu/cargo-app
             aws ecr get-login-password --region ca-central-1 | \
               docker login --username AWS --password-stdin 954222311757.dkr.ecr.ca-central-1.amazonaws.com
-            docker pull 954222311757.dkr.ecr.eu-central-1.amazonaws.com/cargoapp_main:latest
+            docker pull 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:latest
             docker compose up -d --no-deps app
           EOF
 
