@@ -1,0 +1,70 @@
+name: Deploy Cargo (prod)
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  # Genel
+  AWS_REGION: ca-central-1
+  ECR_REGISTRY: 222634359755.dkr.ecr.eu-central-1.amazonaws.com
+  ECR_REPOSITORY: cargoapp_main
+  IMAGE_TAG: latest
+
+  # EC2
+  EC2_HOST: ${{ secrets.EC2_IP_CARGO_CA }}
+  EC2_USER: ubuntu
+  EC2_APP_PATH: /home/ubuntu/cargo-app
+
+  # Telegram
+
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          aws-region: ca-central-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          docker build --no-cache \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY_CARGO_CA }}" > ~/.ssh/ec2.pem
+          chmod 600 ~/.ssh/ec2.pem
+
+      - name: Deploy on EC2
+        run: |
+          ssh -i ~/.ssh/ec2.pem -o StrictHostKeyChecking=no \
+          $EC2_USER@$EC2_HOST << 'EOF'
+            cd /home/ubuntu/cargo-app
+            aws ecr get-login-password --region ca-central-1 | \
+              docker login --username AWS --password-stdin 954222311757.dkr.ecr.ca-central-1.amazonaws.com
+            docker pull 954222311757.dkr.ecr.eu-central-1.amazonaws.com/cargoapp_main:latest
+            docker compose up -d --no-deps app
+          EOF
+
+      - name: Cleanup local Docker image
+        run: |
+          docker rmi $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG || true
+
