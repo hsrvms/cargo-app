@@ -23,6 +23,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: cargo_main
 
     steps:
       - name: Checkout repo
