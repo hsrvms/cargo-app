@@ -892,5 +892,4 @@ class FilterManager {
 // For backward compatibility, alias to the window object
 window.FilterManager = FilterManager;
 
-// ES6 module export
 export { FilterManager };
