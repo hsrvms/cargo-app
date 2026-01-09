@@ -18,8 +18,6 @@ import (
 func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *config.Config) {
 	jwtService := authServices.NewJWTService()
 
-	// Create rate limiter for SafeCube API
-
 	var safeCubeAPIService shipmentServices.SafeCubeAPIService
 
 	if os.Getenv("USE_DUMMY_API") == "true" {
