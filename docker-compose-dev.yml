@@ -1,0 +1,41 @@
+services:
+    app:
+        # image: 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:latest
+        build:
+            context: .
+            dockerfile: Dockerfile
+        user: "${UID}:${GID}"
+        ports:
+            - "8080:8080"
+        volumes:
+            - .:/app
+        env_file:
+            - .env
+        environment:
+            - GOCACHE=/tmp/go-cache
+        depends_on:
+            - db
+        tty: true
+        stdin_open: true
+        command: ["sh", "-c", "sleep 5 && air -c .air.toml"] # Wait for DB to be ready
+        restart: unless-stopped
+
+    db:
+        image: postgres:14-alpine
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=go-starter
+        ports:
+            - "5432:5432"
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    postgres_data:
