@@ -1,6 +1,5 @@
 services:
     app:
-        # image: 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:latest
         build:
             context: .
             dockerfile: Dockerfile
