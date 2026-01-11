@@ -1,5 +1,5 @@
 Run the app via
-```docker compose up --build```
+```docker compose -f docker-compose-dev.yml up --build```
 
 For detached terminal
 ```docker compose up --build -d```
