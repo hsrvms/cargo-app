@@ -660,7 +660,6 @@ export function handleToolbar(gridApi) {
 
   const refreshGridBtn = document.getElementById("refreshGridBtn");
   refreshGridBtn.addEventListener("click", () => {
-    console.log("Refreshing grid data and updating map...");
     loadShipments(gridApi);
   });
 
@@ -684,7 +683,6 @@ export function initializeFilterManager(gridApi) {
     try {
       filterManager = new FilterManager(gridApi);
       window.filterManager = filterManager;
-      console.log("Filter manager manually initialized");
       return filterManager;
     } catch (error) {
       console.error("Failed to manually initialize filter manager:", error);
@@ -709,9 +707,6 @@ export function loadShipments(gridApi) {
       setTimeout(() => {
         const visibleShipments = getVisibleShipments(gridApi, { debug: false });
         mapDataService.broadcastShipments(visibleShipments, []);
-        console.log(
-          `📡 Broadcasted ${visibleShipments.length} visible shipments to map service`,
-        );
       }, 100); // Small delay to ensure grid has processed the data
     })
     .catch((error) => {
@@ -746,11 +741,6 @@ function updateShipmentField(shipmentId, field, value) {
     payload[apiField] = String(value).trim();
   }
 
-  console.log(
-    `Updating ONLY ${apiField} for shipment ${shipmentId} with value:`,
-    payload[apiField],
-  );
-
   fetch(`/api/shipments/${shipmentId}/update-info`, {
     method: "PATCH",
     headers: {
@@ -775,9 +765,6 @@ function updateShipmentField(shipmentId, field, value) {
           loadShipments(window.gridApi); // Reload data to get correct values
         }
       } else {
-        console.log(
-          `Successfully updated ${apiField} for shipment ${shipmentId}`,
-        );
         // You could add success toast notification here if available
         // showToast(`${field} updated successfully`, "success");
       }

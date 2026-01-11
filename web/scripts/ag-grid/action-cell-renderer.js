@@ -75,7 +75,6 @@ function refreshShipment(gridApi, id) {
     .then((data) => {
       gridApi.applyTransaction({ update: [data.shipment] });
       showToast("Shipment refreshed", "info");
-      console.log("Shipment Refreshed");
     })
     .catch((err) => {
       showToast("Error refreshing shipment", "error");
