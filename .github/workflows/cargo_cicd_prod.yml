@@ -98,7 +98,7 @@ jobs:
             
             echo "✅ Deployment complete!"
             docker ps | grep app
-            docker logs app --tail 20
+            docker logs cargo-app-app-1  --tail 20
           EOF
 
       - name: Cleanup local images
