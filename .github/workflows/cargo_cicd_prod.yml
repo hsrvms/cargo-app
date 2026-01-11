@@ -29,6 +29,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Generate image tag
+        id: image_tag
+        run: |
+          IMAGE_TAG="v1.0.0-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "Generated tag: $IMAGE_TAG"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -41,12 +48,18 @@ jobs:
 
       - name: Build Docker image
         run: |
+          echo "🔨 Building image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker build --no-cache \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
 
       - name: Push Docker image to ECR
         run: |
+          echo "📤 Pushing tagged image..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+          echo "📤 Pushing latest tag..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       - name: Setup SSH key
         run: |
@@ -55,17 +68,47 @@ jobs:
           chmod 600 ~/.ssh/ec2.pem
 
       - name: Deploy on EC2
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
           ssh -i ~/.ssh/ec2.pem -o StrictHostKeyChecking=no \
-          $EC2_USER@$EC2_HOST << 'EOF'
-            cd /home/ubuntu/cargo-app
+          $EC2_USER@$EC2_HOST << EOF
+            set -e
+            cd $EC2_APP_PATH
+            
+            echo "🔐 Logging into ECR..."
             aws ecr get-login-password --region ca-central-1 | \
-              docker login --username AWS --password-stdin 954222311757.dkr.ecr.ca-central-1.amazonaws.com
-            docker pull 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:latest
-            docker compose up -d --no-deps app
+              docker login --username AWS --password-stdin $ECR_REGISTRY
+            
+            echo "📝 Updating .env with new image tag..."
+            echo "IMAGE_TAG=$IMAGE_TAG" > .env.image
+            
+            echo "🗑️ Stopping old container..."
+            docker compose down app || true
+            
+            echo "📥 Pulling new image: $IMAGE_TAG"
+            export IMAGE_TAG=$IMAGE_TAG
+            docker compose pull app
+            
+            echo "🚀 Starting new container..."
+            docker compose up -d app
+            
+            echo "⏳ Waiting for container to be healthy..."
+            sleep 5
+            
+            echo "✅ Deployment complete!"
+            docker ps | grep cargo-app
+            docker logs cargo-app --tail 20
           EOF
 
-      - name: Cleanup local Docker image
+      - name: Cleanup local images
+        if: always()
         run: |
           docker rmi $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG || true
-
+          docker rmi $ECR_REGISTRY/$ECR_REPOSITORY:latest || true
+      - name: Deployment summary
+        run: |
+          echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** \`$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECR Repository:** \`$ECR_REPOSITORY\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed to:** \`$EC2_HOST\`" >> $GITHUB_STEP_SUMMARY

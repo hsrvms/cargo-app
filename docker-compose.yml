@@ -1,6 +1,7 @@
 services:
   app:
-    image: 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:latest
+    image: 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:${IMAGE_TAG}
+    pull_policy: always
     # build:
     #   context: .
     #   dockerfile: Dockerfile
@@ -11,6 +12,7 @@ services:
       - .:/app
     env_file:
       - .env
+      - .env.image
     environment:
       - GOCACHE=/tmp/go-cache
     depends_on:
