@@ -1,8 +1,3 @@
-/**
- * Map Data Service - Handles cross-page communication for map functionality
- * Uses BroadcastChannel API for real-time synchronization between grid and map pages
- */
-
 class MapDataService {
   constructor() {
     this.channelName = "shipment-map-data";
@@ -22,27 +17,18 @@ class MapDataService {
     this.initialize();
   }
 
-  /**
-   * Initialize the BroadcastChannel and set up event listeners
-   */
   initialize() {
     try {
       this.channel = new BroadcastChannel(this.channelName);
       this.channel.addEventListener("message", this.handleMessage.bind(this));
       this.isConnected = true;
-      console.log("✅ MapDataService initialized successfully");
-
-      // Request initial data when a new page connects
       this.requestInitialData();
     } catch (error) {
-      console.error("❌ Failed to initialize MapDataService:", error);
+      console.error("Failed to initialize MapDataService:", error);
       this.isConnected = false;
     }
   }
 
-  /**
-   * Handle incoming messages from other pages
-   */
   handleMessage(event) {
     const { type, data, timestamp } = event.data;
 
@@ -70,9 +56,6 @@ class MapDataService {
     }
   }
 
-  /**
-   * Send shipments data to all connected pages
-   */
   broadcastShipments(visibleShipments, selectedShipments = []) {
     if (!this.isConnected) {
       console.warn("MapDataService not connected");
@@ -98,9 +81,6 @@ class MapDataService {
     this.notifyListeners("shipmentsUpdate", message.data);
   }
 
-  /**
-   * Send grid state changes to all connected pages
-   */
   broadcastGridState(gridState) {
     if (!this.isConnected) return;
 
@@ -117,9 +97,6 @@ class MapDataService {
     this.notifyListeners("gridStateUpdate", gridState);
   }
 
-  /**
-   * Send selection changes to all connected pages
-   */
   broadcastSelection(selectedShipments) {
     if (!this.isConnected) return;
 
@@ -136,9 +113,6 @@ class MapDataService {
     this.notifyListeners("selectionUpdate", selectedShipments);
   }
 
-  /**
-   * Send map view changes (bounds, zoom, center) to other pages
-   */
   broadcastMapView(viewData) {
     if (!this.isConnected) return;
 
@@ -152,9 +126,6 @@ class MapDataService {
     this.notifyListeners("mapViewChange", viewData);
   }
 
-  /**
-   * Request initial data from other pages (used when a new page loads)
-   */
   requestInitialData() {
     if (!this.isConnected) return;
 
@@ -167,36 +138,23 @@ class MapDataService {
     this.channel.postMessage(message);
   }
 
-  /**
-   * Handle shipments data update
-   */
   handleShipmentsUpdate(data) {
     this.currentData.visibleShipments = data.visibleShipments || [];
     this.currentData.selectedShipments = data.selectedShipments || [];
     this.notifyListeners("shipmentsUpdate", data);
   }
 
-  /**
-   * Handle grid state update
-   */
   handleGridStateUpdate(data) {
     this.currentData.gridState = { ...this.currentData.gridState, ...data };
     this.notifyListeners("gridStateUpdate", data);
   }
 
-  /**
-   * Handle selection update
-   */
   handleSelectionUpdate(data) {
     this.currentData.selectedShipments = data.selectedShipments || [];
     this.notifyListeners("selectionUpdate", data.selectedShipments);
   }
 
-  /**
-   * Handle request for initial data
-   */
   handleInitialDataRequest() {
-    // Always respond to let requester know this page exists
     const message = {
       type: "INITIAL_DATA_RESPONSE",
       data: {
@@ -207,36 +165,23 @@ class MapDataService {
       timestamp: new Date().toISOString(),
     };
     this.channel.postMessage(message);
-    console.log(
-      `📡 Responding to initial data request with ${this.currentData.visibleShipments.length} shipments`,
-    );
   }
 
-  /**
-   * Handle initial data response
-   */
   handleInitialDataResponse(data) {
     this.currentData = { ...this.currentData, ...data };
     this.notifyListeners("initialDataReceived", data);
   }
 
-  /**
-   * Handle map view change
-   */
   handleMapViewChange(data) {
     this.notifyListeners("mapViewChange", data);
   }
 
-  /**
-   * Add event listener for specific events
-   */
   addEventListener(eventType, callback) {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, []);
     }
     this.listeners.get(eventType).push(callback);
 
-    // If we already have data and this is a data-related event, call immediately
     if (
       eventType === "shipmentsUpdate" &&
       this.currentData.visibleShipments.length > 0
@@ -254,9 +199,6 @@ class MapDataService {
     }
   }
 
-  /**
-   * Remove event listener
-   */
   removeEventListener(eventType, callback) {
     if (this.listeners.has(eventType)) {
       const callbacks = this.listeners.get(eventType);
@@ -267,9 +209,6 @@ class MapDataService {
     }
   }
 
-  /**
-   * Notify all listeners of a specific event type
-   */
   notifyListeners(eventType, data) {
     if (this.listeners.has(eventType)) {
       this.listeners.get(eventType).forEach((callback) => {
@@ -282,23 +221,14 @@ class MapDataService {
     }
   }
 
-  /**
-   * Get current data
-   */
   getCurrentData() {
     return { ...this.currentData };
   }
 
-  /**
-   * Check if service is connected
-   */
   isServiceConnected() {
     return this.isConnected;
   }
 
-  /**
-   * Get connection status and data summary
-   */
   getStatus() {
     return {
       connected: this.isConnected,
@@ -313,26 +243,19 @@ class MapDataService {
     };
   }
 
-  /**
-   * Cleanup resources
-   */
   destroy() {
     if (this.channel) {
       this.channel.close();
     }
     this.listeners.clear();
     this.isConnected = false;
-    console.log("🧹 MapDataService destroyed");
   }
 }
 
-// Create singleton instance
 const mapDataService = new MapDataService();
 
-// Export both the class and the singleton instance
 export { MapDataService, mapDataService };
 
-// Also make it available globally for debugging
 if (typeof window !== "undefined") {
   window.mapDataService = mapDataService;
 }

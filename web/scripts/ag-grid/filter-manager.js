@@ -341,7 +341,7 @@ class FilterManager {
 
       if (!response.ok) {
         if (response.status === 401) {
-          console.log("User not authenticated, returning empty filters");
+          console.warning("User not authenticated, returning empty filters");
           return {};
         }
         throw new Error("Failed to fetch filters");

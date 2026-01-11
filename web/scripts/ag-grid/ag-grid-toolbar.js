@@ -19,7 +19,6 @@ export function deleteSelectedBtnEvent(gridApi) {
       gridApi.applyTransaction({ remove: selectedRows });
     })
     .catch((err) => {
-      console.log("Delete failed:", err);
       alert("Delete failed");
     });
 }

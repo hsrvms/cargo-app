@@ -79,9 +79,7 @@ templ Header() {
 			</div>
 		</div>
 		<script>
-			// Load user information for the profile dropdown
 			document.addEventListener('DOMContentLoaded', function() {
-				// Get user info from the auth cookie
 				const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth_token='));
 				if (authCookie) {
 					try {
@@ -92,7 +90,7 @@ templ Header() {
 							userEmailEl.textContent = payload.email;
 						}
 					} catch (e) {
-						console.log('Could not decode user info from token');
+						console.error('Could not decode user info from token');
 					}
 				}
 			});
@@ -188,9 +186,7 @@ templ MapHeader() {
 			</div>
 		</div>
 		<script>
-			// Load user information for the map page profile dropdown
 			document.addEventListener('DOMContentLoaded', function() {
-				// Get user info from the auth cookie
 				const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth_token='));
 				if (authCookie) {
 					try {
@@ -201,7 +197,7 @@ templ MapHeader() {
 							userEmailEl.textContent = payload.email;
 						}
 					} catch (e) {
-						console.log('Could not decode user info from token');
+						console.error('Could not decode user info from token');
 					}
 				}
 			});
