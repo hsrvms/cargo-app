@@ -50,6 +50,7 @@ jobs:
         run: |
           echo "🔨 Building image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           docker build --no-cache \
+          -f Dockerfile.prod \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
 
@@ -84,14 +85,16 @@ jobs:
             echo "IMAGE_TAG=$IMAGE_TAG" > .env.image
             
             echo "🗑️ Stopping old container..."
-            docker compose down app || true
+            docker compose -f docker-compose-prod.yml down || true
+
             
             echo "📥 Pulling new image: $IMAGE_TAG"
             export IMAGE_TAG=$IMAGE_TAG
-            docker compose pull app
+            docker compose -f docker-compose-prod.yml pull app
+
             
             echo "🚀 Starting new container..."
-            docker compose up -d app
+            docker compose -f docker-compose-prod.yml up -d app
             
             echo "⏳ Waiting for container to be healthy..."
             sleep 5
