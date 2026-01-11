@@ -6,7 +6,6 @@
 import { mapDataService } from "./map-data-service.js";
 import { getVisibleShipments } from "../ag-grid/get-visible-shipments.js";
 
-// Global variables for map management
 let currentMapInstance = null;
 let markers = [];
 let routes = [];
@@ -27,23 +26,19 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
 
   isStandaloneMap = standalone;
 
-  // Initialize map container
   const mapContainer = document.getElementById(mapContainerId);
   if (!mapContainer) {
     console.error(`Map container '${mapContainerId}' not found`);
     return null;
   }
 
-  // Clean up existing map instance
   if (mapContainer._leaflet_id) {
     mapContainer._leaflet_id = null;
     mapContainer.innerHTML = "";
   }
 
-  // Create new map instance
   currentMapInstance = L.map(mapContainerId).setView(initialView, initialZoom);
 
-  // Add tile layer with proper zoom limits
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     minZoom: 2,
     maxZoom: 19,
@@ -51,70 +46,43 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(currentMapInstance);
 
-  // Set map bounds to prevent over-zooming out
   currentMapInstance.setMaxBounds([
     [-85, -180],
     [85, 180],
   ]);
 
-  // Initialize markers and routes arrays
   markers = [];
   routes = [];
 
-  // Add map controls
   addMapControls(currentMapInstance, gridApi);
 
-  // Set up cross-page communication
   setupMapDataServiceListeners();
 
-  // If we have a gridApi, set up listeners and handle initial data
   if (gridApi) {
-    // Set up grid event listeners for real-time updates
     setupGridEventListeners(gridApi);
 
-    // Check if grid already has data
     const hasGridData =
       gridApi.getDisplayedRowCount && gridApi.getDisplayedRowCount() > 0;
 
     if (hasGridData) {
-      // Grid has data, get visible shipments and broadcast
       const visibleShipments = getVisibleShipments(gridApi, { debug: false });
       updateMapWithShipments(visibleShipments);
       mapDataService.broadcastShipments(visibleShipments);
-      console.log(
-        `📡 Enhanced map initialized with ${visibleShipments.length} visible shipments`,
-      );
     } else {
-      // Grid doesn't have data yet, wait for it to load
-      console.log(
-        "🗺️ Grid detected but no data yet, waiting for data to load...",
-      );
-
-      // Listen for when data gets loaded
       const dataLoadedListener = () => {
         const visibleShipments = getVisibleShipments(gridApi, { debug: false });
         updateMapWithShipments(visibleShipments);
         mapDataService.broadcastShipments(visibleShipments);
-        console.log(
-          `📡 Enhanced map updated with ${visibleShipments.length} visible shipments after data load`,
-        );
       };
 
-      // Listen for first data load (this will fire when loadShipments completes)
       gridApi.addEventListener("firstDataRendered", dataLoadedListener);
     }
   } else if (isStandaloneMap) {
-    console.log(
-      "🗺️ Initializing standalone map, requesting data from other pages",
-    );
-    // Request initial data from other pages
     mapDataService.requestInitialData();
   }
 
-  // Set up map event listeners for broadcasting view changes
   setupMapEventListeners();
 
-  // Store map globally for access from other components
   window.currentMapEnhanced = currentMapInstance;
   currentMapInstance._shipmentMarkers = markers;
   currentMapInstance._shipmentRoutes = routes;
@@ -126,21 +94,17 @@ export function handleMapEnhanced(gridApi = null, options = {}) {
  * Set up listeners for MapDataService events
  */
 function setupMapDataServiceListeners() {
-  // Listen for shipment updates from other pages
   mapDataService.addEventListener("shipmentsUpdate", (data) => {
     updateMapWithShipments(data.visibleShipments, data.selectedShipments);
   });
 
-  // Listen for initial data responses
   mapDataService.addEventListener("initialDataReceived", (data) => {
     if (data.visibleShipments && data.visibleShipments.length > 0) {
       updateMapWithShipments(data.visibleShipments, data.selectedShipments);
     }
   });
 
-  // Listen for selection updates
   mapDataService.addEventListener("selectionUpdate", (selectedShipments) => {
-    console.log("📨 Received selection update:", selectedShipments);
     highlightSelectedShipments(selectedShipments);
   });
 }
@@ -156,13 +120,10 @@ function setupGridEventListeners(gridApi) {
       const visibleShipments = getVisibleShipments(gridApi, { debug: false });
       const selectedShipments = getSelectedShipments(gridApi);
 
-      // Update local map
       updateMapWithShipments(visibleShipments, selectedShipments);
 
-      // Broadcast to other pages
       mapDataService.broadcastShipments(visibleShipments, selectedShipments);
 
-      // Also broadcast grid state (with null checks)
       const gridState = {};
       try {
         if (typeof gridApi.getFilterModel === "function") {
@@ -187,7 +148,6 @@ function setupGridEventListeners(gridApi) {
     }, 100);
   };
 
-  // Set up grid event listeners
   const gridEvents = [
     "filterChanged",
     "paginationChanged",
@@ -206,7 +166,6 @@ function setupGridEventListeners(gridApi) {
 function setupMapEventListeners() {
   if (!currentMapInstance) return;
 
-  // Broadcast map view changes to other pages
   const broadcastViewChange = () => {
     const center = currentMapInstance.getCenter();
     const zoom = currentMapInstance.getZoom();
@@ -234,13 +193,11 @@ function setupMapEventListeners() {
 function updateMapWithShipments(visibleShipments, selectedShipments = []) {
   if (!currentMapInstance) return;
 
-  // Clear existing markers and routes
   clearMapElements();
 
   const validCoordinates = [];
   const shipmentsWithoutCoordinates = [];
 
-  // Add markers for visible shipments
   visibleShipments.forEach((shipment) => {
     if (hasValidCoordinates(shipment)) {
       const coords = shipment.routeData.coordinates;
@@ -249,16 +206,13 @@ function updateMapWithShipments(visibleShipments, selectedShipments = []) {
 
       validCoordinates.push([lat, lng]);
 
-      // Create marker with custom status-based icon
       const customIcon = createStatusIcon(shipment.shippingStatus);
       const marker = L.marker([lat, lng], { icon: customIcon }).addTo(
         currentMapInstance,
       );
 
-      // Store shipment data with marker for selection highlighting
       marker._shipmentData = shipment;
 
-      // Create popup content
       const popupContent = createShipmentPopup(shipment);
       marker.bindPopup(popupContent);
 
@@ -268,15 +222,12 @@ function updateMapWithShipments(visibleShipments, selectedShipments = []) {
     }
   });
 
-  // Draw routes for shipments with route data
   drawShipmentRoutes(visibleShipments);
 
-  // Fit map to show all markers if we have valid coordinates
   if (validCoordinates.length > 0) {
     fitMapToMarkers(currentMapInstance, validCoordinates);
   }
 
-  // Highlight selected shipments
   if (selectedShipments.length > 0) {
     highlightSelectedShipments(selectedShipments);
   }
@@ -462,8 +413,6 @@ export function createHighlightedIcon(status) {
   });
 }
 
-// Complete implementations from original handle-map.js
-
 export function addMapControls(map, gridApi) {
   const mapControls = L.control({ position: "topleft" });
 
@@ -496,13 +445,10 @@ export function addMapControls(map, gridApi) {
       </div>
     `;
 
-    // Prevent map events when clicking controls
     L.DomEvent.disableClickPropagation(div);
 
-    // Add event listeners
     div.querySelector("#refreshMapBtn").addEventListener("click", (e) => {
       e.preventDefault();
-      console.log("Refreshing map...");
       if (gridApi) {
         updateMapWithShipments(getVisibleShipments(gridApi));
       } else {
@@ -551,7 +497,6 @@ export function drawShipmentRoutes(shipments) {
   });
 }
 
-// Helper function to handle International Date Line crossings
 function splitRouteAtDateLine(coordinates) {
   if (coordinates.length < 2) return [coordinates];
 
@@ -564,34 +509,20 @@ function splitRouteAtDateLine(coordinates) {
     const currLng = coordinates[i][1];
     const lngDiff = Math.abs(currLng - prevLng);
 
-    // If the longitude difference is greater than 180, we're crossing the date line
     if (lngDiff > 180) {
       dateLineCrossings++;
-      console.log(
-        `🌍 Date line crossing detected: ${prevLng.toFixed(2)}° → ${currLng.toFixed(2)}° (diff: ${lngDiff.toFixed(2)}°)`,
-      );
-      // Finish current segment
       segments.push(currentSegment);
-      // Start new segment with current point
       currentSegment = [coordinates[i]];
     } else {
-      // Normal case - add point to current segment
       currentSegment.push(coordinates[i]);
     }
   }
 
-  // Add the last segment if it has points
   if (currentSegment.length > 0) {
     segments.push(currentSegment);
   }
 
   const filteredSegments = segments.filter((segment) => segment.length >= 2);
-
-  if (dateLineCrossings > 0) {
-    console.log(
-      `🗺️ Route split into ${filteredSegments.length} segments due to ${dateLineCrossings} date line crossing(s)`,
-    );
-  }
 
   return filteredSegments;
 }
@@ -681,11 +612,9 @@ function drawShipmentRoutesForShipment(map, shipment) {
     // Split route at date line crossings to avoid straight lines across the world
     const routeSegments = splitRouteAtDateLine(validLatLngs);
 
-    // Create polylines for each segment
     routeSegments.forEach((segmentCoords, segmentIdx) => {
       const polyline = L.polyline(segmentCoords, routeStyle).addTo(routeGroup);
 
-      // Add hover effects optimized for thin dotted lines
       polyline.on("mouseover", function (e) {
         this.setStyle({
           weight: Math.min(routeWeight + 1, 4), // More subtle weight increase for thin lines
@@ -703,7 +632,6 @@ function drawShipmentRoutesForShipment(map, shipment) {
         });
       });
 
-      // Add popup to route segment with enhanced information
       const popupContent = createRoutePopupContent(
         shipment,
         routeType,
@@ -714,7 +642,6 @@ function drawShipmentRoutesForShipment(map, shipment) {
       );
       polyline.bindPopup(popupContent);
 
-      // Store route metadata
       polyline._shipmentId = shipment.id;
       polyline._routeType = routeType;
       polyline._segmentIndex = index;
@@ -727,7 +654,6 @@ function drawShipmentRoutesForShipment(map, shipment) {
 }
 
 function getOptimalRouteWeight(map, coordinates, baseWeight) {
-  // Simple implementation - can be enhanced based on zoom level and overlaps
   const zoom = map.getZoom();
   if (zoom < 4) return Math.max(1, baseWeight - 1);
   if (zoom < 8) return baseWeight;
@@ -913,12 +839,7 @@ export function showNoRoutesNotification() {
   console.warn("No shipments with valid coordinates found");
 }
 
-/**
- * Initialize enhanced map functionality
- * Can be called from main.js or standalone map page
- */
 export function initEnhancedMap(gridApi = null, options = {}) {
-  // Check if MapDataService is available
   if (!mapDataService.isServiceConnected()) {
     console.error(
       "❌ MapDataService not available. Enhanced features disabled.",
@@ -929,10 +850,6 @@ export function initEnhancedMap(gridApi = null, options = {}) {
   return handleMapEnhanced(gridApi, options);
 }
 
-// Debug function
-/**
- * Toggle markers visibility on the map
- */
 export function toggleMarkers(map) {
   if (!map || !markers.length) return;
 
@@ -946,13 +863,8 @@ export function toggleMarkers(map) {
       map.addLayer(marker);
     }
   });
-
-  console.log(`🔄 Markers ${areMarkersVisible ? "hidden" : "shown"}`);
 }
 
-/**
- * Toggle routes visibility on the map
- */
 export function toggleRoutes(map) {
   if (!map || !routes.length) return;
 
@@ -966,8 +878,6 @@ export function toggleRoutes(map) {
       map.addLayer(route);
     }
   });
-
-  console.log(`🔄 Routes ${areRoutesVisible ? "hidden" : "shown"}`);
 }
 
 export function getMapStatus() {
@@ -980,10 +890,8 @@ export function getMapStatus() {
   };
 }
 
-// Export updateMapWithShipments for standalone map usage
 export { updateMapWithShipments };
 
-// Make functions globally available for debugging and standalone usage
 if (typeof window !== "undefined") {
   window.updateMapWithShipments = updateMapWithShipments;
   window.getMapStatus = getMapStatus;

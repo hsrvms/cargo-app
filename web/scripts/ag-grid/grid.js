@@ -64,12 +64,15 @@ const columnDefs = [
     width: 200,
     minWidth: 150,
     filter: "agTextColumnFilter",
-    cellRenderer: (params) => {
+    valueGetter: (params) => {
       const pol = params.data?.route?.pol;
       if (pol && pol.location) {
         return `${pol.location.name} (${pol.location.locode})`;
       }
       return "N/A";
+    },
+    cellRenderer: (params) => {
+      return params.value;
     },
   },
   {
@@ -78,12 +81,15 @@ const columnDefs = [
     width: 200,
     minWidth: 150,
     filter: "agTextColumnFilter",
-    cellRenderer: (params) => {
+    valueGetter: (params) => {
       const pod = params.data?.route?.pod;
       if (pod && pod.location) {
         return `${pod.location.name} (${pod.location.locode})`;
       }
       return "N/A";
+    },
+    cellRenderer: (params) => {
+      return params.value;
     },
   },
   {
@@ -92,7 +98,7 @@ const columnDefs = [
     width: 180,
     minWidth: 150,
     filter: "agSetColumnFilter",
-    cellRenderer: (params) => {
+    valueGetter: (params) => {
       const vessels = params.data?.vessels;
       if (vessels && vessels.length > 0) {
         const vessel = vessels[0];
@@ -100,18 +106,25 @@ const columnDefs = [
       }
       return "N/A";
     },
+    cellRenderer: (params) => {
+      return params.value;
+    },
   },
   {
     field: "containerCount",
     headerName: "Containers",
     width: 120,
     minWidth: 100,
-    cellRenderer: (params) => {
+    filter: "agNumberColumnFilter",
+    valueGetter: (params) => {
       const containers = params.data?.containers;
       if (containers && containers.length > 0) {
-        return containers.length.toString();
+        return containers.length;
       }
-      return "0";
+      return 0;
+    },
+    cellRenderer: (params) => {
+      return params.value.toString();
     },
   },
   {
@@ -120,9 +133,9 @@ const columnDefs = [
     width: 120,
     minWidth: 100,
     filter: "agDateColumnFilter",
-    cellRenderer: (params) => {
+    valueGetter: (params) => {
       const route = params.data?.route;
-      if (!route) return "N/A";
+      if (!route) return null;
 
       // Find next port with a future date
       const ports = [route.prepol, route.pol, route.pod, route.postpod].filter(
@@ -132,15 +145,19 @@ const columnDefs = [
 
       for (const port of ports) {
         if (port.date && new Date(port.date) > now) {
-          const date = new Date(port.date);
-          return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
+          return new Date(port.date);
         }
       }
 
-      return "N/A";
+      return null;
+    },
+    cellRenderer: (params) => {
+      if (!params.value) return "N/A";
+      const date = new Date(params.value);
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
     },
   },
   {
@@ -643,7 +660,6 @@ export function handleToolbar(gridApi) {
 
   const refreshGridBtn = document.getElementById("refreshGridBtn");
   refreshGridBtn.addEventListener("click", () => {
-    console.log("Refreshing grid data and updating map...");
     loadShipments(gridApi);
   });
 
@@ -667,7 +683,6 @@ export function initializeFilterManager(gridApi) {
     try {
       filterManager = new FilterManager(gridApi);
       window.filterManager = filterManager;
-      console.log("Filter manager manually initialized");
       return filterManager;
     } catch (error) {
       console.error("Failed to manually initialize filter manager:", error);
@@ -692,9 +707,6 @@ export function loadShipments(gridApi) {
       setTimeout(() => {
         const visibleShipments = getVisibleShipments(gridApi, { debug: false });
         mapDataService.broadcastShipments(visibleShipments, []);
-        console.log(
-          `📡 Broadcasted ${visibleShipments.length} visible shipments to map service`,
-        );
       }, 100); // Small delay to ensure grid has processed the data
     })
     .catch((error) => {
@@ -729,11 +741,6 @@ function updateShipmentField(shipmentId, field, value) {
     payload[apiField] = String(value).trim();
   }
 
-  console.log(
-    `Updating ONLY ${apiField} for shipment ${shipmentId} with value:`,
-    payload[apiField],
-  );
-
   fetch(`/api/shipments/${shipmentId}/update-info`, {
     method: "PATCH",
     headers: {
@@ -758,9 +765,6 @@ function updateShipmentField(shipmentId, field, value) {
           loadShipments(window.gridApi); // Reload data to get correct values
         }
       } else {
-        console.log(
-          `Successfully updated ${apiField} for shipment ${shipmentId}`,
-        );
         // You could add success toast notification here if available
         // showToast(`${field} updated successfully`, "success");
       }
