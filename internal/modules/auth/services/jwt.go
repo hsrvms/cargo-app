@@ -42,15 +42,17 @@ func NewJWTService() *JWTService {
 
 func (j *JWTService) GenerateToken(user *models.User) (string, error) {
 	expirationTimeStr := os.Getenv("JWT_EXPIRATION_HOURS")
-	expirationHours := 24 // default 24 hours
+	expirationDuration := 24 * time.Hour
 
 	if expirationTimeStr != "" {
-		if hours, err := strconv.Atoi(expirationTimeStr); err == nil {
-			expirationHours = hours
+		if hours, err := strconv.ParseFloat(expirationTimeStr, 64); err == nil {
+			expirationDuration = time.Duration(hours * float64(time.Hour))
+		} else {
+			fmt.Printf("Warning: Invalid JWT_EXPIRATION_HOURS '%s' using default.", expirationTimeStr)
 		}
 	}
 
-	expirationTime := time.Now().Add(time.Duration(expirationHours) * time.Hour)
+	expirationTime := time.Now().Add(expirationDuration)
 
 	claims := &Claims{
 		UserID: user.ID,
