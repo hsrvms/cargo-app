@@ -1,0 +1,27 @@
+package components
+
+templ ShipmentModal() {
+	<div
+		id="shipment-modal"
+		class="fixed inset-0 z-[9999] hidden opacity-0 bg-black bg-opacity-50 transition-opacity duration-300"
+		onclick="closeModal()"
+	>
+		<div class="flex items-center justify-center min-h-screen px-4 py-6">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
+				id="modal-content"
+				onclick="event.stopPropagation()"
+			>
+				<div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Shipment Details</h2>
+					<button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200">
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+				<div id="modal-body" class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]"></div>
+			</div>
+		</div>
+	</div>
+}

@@ -549,6 +549,8 @@ const gridOptions = {
   pagination: true,
   paginationPageSize: 20, // Increased due to more columns
   paginationPageSizeSelector: [20, 50, 100],
+  
+    domLayout: "autoHeight",
 
   // Performance optimizations for richer data
   rowBuffer: 15,

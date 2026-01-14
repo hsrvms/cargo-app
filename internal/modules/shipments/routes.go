@@ -53,5 +53,6 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	shipmentsAPI.DELETE("/bulk-delete", shipmentAPIHandler.BulkDeleteUserShipments)
 
 	e.GET("/shipments", shipmentWEBHandler.ViewShipmentPage, middlewares.WebJWTMiddleware(jwtService))
+	e.GET("/shipments/grid", shipmentWEBHandler.ViewGridOnlyPage, middlewares.WebJWTMiddleware(jwtService))
 	e.GET("/map", shipmentWEBHandler.ViewMapPage, middlewares.WebJWTMiddleware(jwtService))
 }
