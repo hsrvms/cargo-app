@@ -1,6 +1,7 @@
 @import "toast.css";
 @import "leaflet.css";
 @import "marker.css";
+@import "map.css";
 
 .ag-theme-alpine {
     --ag-background-color: rgb(255, 255, 255);
@@ -17,24 +18,19 @@
     --ag-secondary-foreground-color: rgb(156, 163, 175);
 }
 
-/* AG-Grid Horizontal Scrolling - Single scrollbar fix */
 .ag-theme-alpine {
-    /* Ensure horizontal scrolling works properly */
     overflow-x: auto !important;
 }
 
 .ag-theme-alpine .ag-root-wrapper {
-    /* Allow the grid to expand horizontally */
     min-width: fit-content;
 }
 
-/* Ensure grid container doesn't constrain width */
 #grid {
     width: 100% !important;
     overflow-x: visible !important;
 }
 
-/* Profile Dropdown Styles */
 .profile-dropdown {
     position: relative;
 }
@@ -71,7 +67,10 @@
     background-color: rgba(59, 130, 246, 0.2);
 }
 
-/* Profile badge pulse animation */
+/* ============================================
+   Animations
+   ============================================ */
+
 .profile-status-indicator {
     animation: pulse 2s infinite;
 }

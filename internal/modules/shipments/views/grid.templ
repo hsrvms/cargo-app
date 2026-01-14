@@ -1,0 +1,23 @@
+package views
+
+import (
+	"go-starter/internal/modules/shipments/views/components"
+	"go-starter/internal/modules/shipments/views/layouts"
+)
+
+templ GridOnlyPage() {
+	@layouts.BaseLayout("Shipments Grid", GridOnlyScripts()) {
+		@components.Header()
+		<main class="mx-auto px-4 py-8 w-full max-w-7xl xl:max-w-[98vw] 2xl:max-w-[98vw]">
+			<div class="grid grid-cols-1 gap-8">
+				@components.ShipmentsGrid()
+			</div>
+		</main>
+		@components.ShipmentModal()
+	}
+}
+
+templ GridOnlyScripts() {
+	<script src="/assets/js/ag-grid-enterprise.min.js"></script>
+	<script type="module" src="/scripts/main.js"></script>
+}
