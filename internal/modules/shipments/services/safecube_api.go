@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -43,21 +44,26 @@ func (m *mockSafeCubeAPIService) GetShipmentDetails(
 		return nil, fmt.Errorf("Failed to read dummy data file: %w", err)
 	}
 
-	var response shipmentsDto.SafeCubeAPIShipmentResponse
-	err = json.Unmarshal(byteValue, &response)
+	var shipmentList []shipmentsDto.SafeCubeAPIShipmentResponse
+	err = json.Unmarshal(byteValue, &shipmentList)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to unmarshal dummy JSON: %w", err)
 	}
 
-	response.Metadata.ShipmentNumber = shipmentNumber
-	if shipmentType != "" {
-		response.Metadata.ShipmentType = shipmentType
-	}
-	if sealine != "" {
-		response.Metadata.Sealine = sealine
+	shipmentNumber = strings.ToUpper(strings.TrimSpace(shipmentNumber))
+	for _, shipment := range shipmentList {
+		if strings.ToUpper(strings.TrimSpace(shipment.Metadata.ShipmentNumber)) == shipmentNumber {
+			log.Printf("Mock SafeCube API: Found shipment %s in dummy data", shipmentNumber)
+			return &shipment, nil
+		}
 	}
 
-	return &response, nil
+	log.Printf("Mock SafeCube API: Shipment %s not found in dummy data", shipmentNumber)
+	return nil, fmt.Errorf("Shipment not found: %s", shipmentNumber)
+}
+
+func (m *mockSafeCubeAPIService) GetRawShipmentData(ctx context.Context, shipmentNumber, shipmentType, sealine string) (json.RawMessage, error) {
+	return nil, nil
 }
 
 func (m *mockSafeCubeAPIService) GetRawShipmentData(ctx context.Context, shipmentNumber, shipmentType, sealine string) (json.RawMessage, error) {
