@@ -21,7 +21,7 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	var safeCubeAPIService shipmentServices.SafeCubeAPIService
 
 	if os.Getenv("USE_DUMMY_API") == "true" {
-		safeCubeAPIService = shipmentServices.NewMockSafeCubeAPIService("pkg/db/dummy_response_data.json")
+		safeCubeAPIService = shipmentServices.NewMockSafeCubeAPIService("pkg/db/dummy_shipment_list.json")
 		log.Println("⚠️ USING MOCK SAFECUBE API")
 	} else {
 		rateLimiter := ratelimiter.NewSafeCubeAPIRateLimiter()
@@ -43,6 +43,7 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	shipmentsAPI.Use(middlewares.JWTMiddleware(jwtService))
 
 	shipmentsAPI.POST("", shipmentAPIHandler.AddShipment)
+	shipmentsAPI.GET("/raw-data", shipmentAPIHandler.GetRawSafeCubeData)
 	shipmentsAPI.GET("/grid-data", shipmentAPIHandler.GetShipmentsForGrid)
 	shipmentsAPI.GET("/:id/details", shipmentAPIHandler.GetShipmentDetails)
 	shipmentsAPI.GET("/:id/details-html", shipmentWEBHandler.GetShipmentDetailsHTML)

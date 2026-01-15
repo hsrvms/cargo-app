@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"go-starter/internal/modules/shipments/dto"
 	shipmentsDto "go-starter/internal/modules/shipments/dto"
 	"go-starter/internal/modules/shipments/models"
@@ -26,4 +27,5 @@ type ShipmentService interface {
 
 type SafeCubeAPIService interface {
 	GetShipmentDetails(ctx context.Context, shipmentNumber, shipmentType, sealine string) (*shipmentsDto.SafeCubeAPIShipmentResponse, error)
+	GetRawShipmentData(ctx context.Context, shipmentNumber, shipmentType, sealine string) (json.RawMessage, error)
 }
