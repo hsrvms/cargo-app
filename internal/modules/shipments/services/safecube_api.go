@@ -66,10 +66,6 @@ func (m *mockSafeCubeAPIService) GetRawShipmentData(ctx context.Context, shipmen
 	return nil, nil
 }
 
-func (m *mockSafeCubeAPIService) GetRawShipmentData(ctx context.Context, shipmentNumber, shipmentType, sealine string) (json.RawMessage, error) {
-	return nil, nil
-}
-
 type safeCubeAPIService struct {
 	httpClient  *http.Client
 	baseUrl     string
