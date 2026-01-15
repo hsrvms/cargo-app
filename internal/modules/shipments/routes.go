@@ -43,6 +43,7 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	shipmentsAPI.Use(middlewares.JWTMiddleware(jwtService))
 
 	shipmentsAPI.POST("", shipmentAPIHandler.AddShipment)
+	shipmentsAPI.GET("/raw-data", shipmentAPIHandler.GetRawSafeCubeData)
 	shipmentsAPI.GET("/grid-data", shipmentAPIHandler.GetShipmentsForGrid)
 	shipmentsAPI.GET("/:id/details", shipmentAPIHandler.GetShipmentDetails)
 	shipmentsAPI.GET("/:id/details-html", shipmentWEBHandler.GetShipmentDetailsHTML)
