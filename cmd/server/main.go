@@ -23,7 +23,6 @@ func main() {
 		}
 	}()
 
-	// Run GORM auto-migration with cleanup
 	if err := database.AutoMigrate(
 		&models.User{},
 		&filterModels.UserFilter{},
