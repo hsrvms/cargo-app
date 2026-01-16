@@ -9,6 +9,8 @@ import (
 	"go-starter/pkg/config"
 	"go-starter/pkg/db"
 	"go-starter/pkg/ratelimiter"
+	"go-starter/web"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -34,11 +36,23 @@ func New(cfg *config.Config, database *db.Database) *Server {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	e.Static("/assets", "web/assets")
-	e.Static("/scripts", "web/scripts")
-	e.Static("/config", "web/config")
+	assetsFS, err := fs.Sub(web.Assets, "assets")
+	if err != nil {
+		log.Fatal(err)
+	}
+	scriptsFS, err := fs.Sub(web.Scripts, "scripts")
+	if err != nil {
+		log.Fatal(err)
+	}
+	configFS, err := fs.Sub(web.Config, "config")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Initialize job scheduler
+	e.StaticFS("/assets", assetsFS)
+	e.StaticFS("/scripts", scriptsFS)
+	e.StaticFS("/config", configFS)
+
 	jobScheduler := jobs.NewJobScheduler()
 
 	server := &Server{
