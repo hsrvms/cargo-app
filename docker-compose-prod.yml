@@ -2,8 +2,8 @@ services:
     app:
         # CHANGE 1: For local testing, use the name we will build below.
         # For actual prod, uncomment the ECR line.
-        image: cargo-prod-test:latest
-        # image: 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:${IMAGE_TAG}
+        #image: cargo-prod-test:latest
+        image: 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:${IMAGE_TAG}
 
         # pull_policy: always  <-- Disable this for local testing so it finds your local image
 
