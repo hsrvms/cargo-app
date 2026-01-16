@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -32,7 +33,19 @@ type Server struct {
 func New(cfg *config.Config, database *db.Database) *Server {
 	e := echo.New()
 
-	e.Use(prettylogger.Logger)
+	if os.Getenv("APP_ENV") == "production" {
+		e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+			Skipper: func(c echo.Context) bool {
+				path := c.Request().URL.Path
+				return strings.HasPrefix(path, "/assets") ||
+					strings.HasPrefix(path, "/scripts") ||
+					strings.HasPrefix(path, "/config")
+			},
+			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${latency_human})\n",
+		}))
+	} else {
+		e.Use(prettylogger.Logger)
+	}
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 

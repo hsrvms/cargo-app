@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ShipmentRefreshJob handles background refreshing of shipments
 type ShipmentRefreshJob struct {
 	shipmentRepo    repositories.ShipmentRepository
 	shipmentService services.ShipmentService
@@ -22,19 +21,13 @@ type ShipmentRefreshJob struct {
 	config          ShipmentRefreshConfig
 }
 
-// ShipmentRefreshConfig contains configuration for the refresh job
 type ShipmentRefreshConfig struct {
-	// RefreshInterval is how often to run the full refresh cycle
-	RefreshInterval time.Duration
-	// ConcurrentWorkers is the number of goroutines to use for parallel processing
-	ConcurrentWorkers int
-	// MaxShipmentsPerRun limits how many shipments to process in one cycle (0 = no limit)
-	MaxShipmentsPerRun int
-	// SkipRecentlyUpdated skips shipments updated within this duration
+	RefreshInterval     time.Duration
+	ConcurrentWorkers   int
+	MaxShipmentsPerRun  int
 	SkipRecentlyUpdated time.Duration
 }
 
-// DefaultShipmentRefreshConfig returns a default configuration
 func DefaultShipmentRefreshConfig() ShipmentRefreshConfig {
 	return ShipmentRefreshConfig{
 		RefreshInterval:     3 * time.Hour,
@@ -44,7 +37,6 @@ func DefaultShipmentRefreshConfig() ShipmentRefreshConfig {
 	}
 }
 
-// RefreshStats contains statistics about a refresh run
 type RefreshStats struct {
 	StartTime         time.Time
 	EndTime           time.Time
@@ -55,7 +47,6 @@ type RefreshStats struct {
 	Errors            []RefreshError
 }
 
-// RefreshError represents an error during refresh
 type RefreshError struct {
 	ShipmentID     uuid.UUID
 	ShipmentNumber string
@@ -63,7 +54,6 @@ type RefreshError struct {
 	Timestamp      time.Time
 }
 
-// NewShipmentRefreshJob creates a new shipment refresh job
 func NewShipmentRefreshJob(
 	shipmentRepo repositories.ShipmentRepository,
 	shipmentService services.ShipmentService,
@@ -78,18 +68,11 @@ func NewShipmentRefreshJob(
 	}
 }
 
-// Start begins the background refresh job with the configured interval
 func (j *ShipmentRefreshJob) Start(ctx context.Context) {
 	log.Printf("Starting shipment refresh job with %v interval", j.config.RefreshInterval)
 
 	ticker := time.NewTicker(j.config.RefreshInterval)
 	defer ticker.Stop()
-
-	// Run once immediately
-	go func() {
-		stats := j.RefreshAllShipments(ctx)
-		j.logRefreshStats(stats)
-	}()
 
 	for {
 		select {
@@ -105,7 +88,6 @@ func (j *ShipmentRefreshJob) Start(ctx context.Context) {
 	}
 }
 
-// RefreshAllShipments refreshes all shipments in the system
 func (j *ShipmentRefreshJob) RefreshAllShipments(ctx context.Context) RefreshStats {
 	stats := RefreshStats{
 		StartTime: time.Now(),
@@ -114,7 +96,6 @@ func (j *ShipmentRefreshJob) RefreshAllShipments(ctx context.Context) RefreshSta
 
 	log.Println("Starting bulk shipment refresh...")
 
-	// Get all shipments that need refreshing
 	shipments, err := j.getShipmentsForRefresh(ctx)
 	if err != nil {
 		log.Printf("Failed to get shipments for refresh: %v", err)
@@ -130,37 +111,31 @@ func (j *ShipmentRefreshJob) RefreshAllShipments(ctx context.Context) RefreshSta
 		return stats
 	}
 
-	// Limit shipments if configured
 	if j.config.MaxShipmentsPerRun > 0 && len(shipments) > j.config.MaxShipmentsPerRun {
 		log.Printf("Limiting refresh to %d shipments (found %d)", j.config.MaxShipmentsPerRun, len(shipments))
 		shipments = shipments[:j.config.MaxShipmentsPerRun]
 		stats.TotalShipments = len(shipments)
 	}
 
-	// Create channels for work distribution
 	shipmentChan := make(chan ShipmentForRefresh, len(shipments))
 	resultChan := make(chan RefreshResult, len(shipments))
 
-	// Send all shipments to the work channel
 	for _, shipment := range shipments {
 		shipmentChan <- shipment
 	}
 	close(shipmentChan)
 
-	// Start worker goroutines
 	var wg sync.WaitGroup
 	for i := 0; i < j.config.ConcurrentWorkers; i++ {
 		wg.Add(1)
 		go j.refreshWorker(ctx, shipmentChan, resultChan, &wg)
 	}
 
-	// Close result channel when all workers are done
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
 
-	// Collect results
 	for result := range resultChan {
 		if result.Success {
 			stats.SuccessfulRefresh++
@@ -179,10 +154,8 @@ func (j *ShipmentRefreshJob) RefreshAllShipments(ctx context.Context) RefreshSta
 	return stats
 }
 
-// ShipmentForRefresh represents a shipment for background processing
 type ShipmentForRefresh = repositories.ShipmentForRefresh
 
-// RefreshResult represents the result of refreshing a single shipment
 type RefreshResult struct {
 	ShipmentID     uuid.UUID
 	ShipmentNumber string
@@ -191,7 +164,6 @@ type RefreshResult struct {
 	Duration       time.Duration
 }
 
-// refreshWorker is a worker goroutine that processes shipments
 func (j *ShipmentRefreshJob) refreshWorker(
 	ctx context.Context,
 	shipmentChan <-chan ShipmentForRefresh,
@@ -206,7 +178,6 @@ func (j *ShipmentRefreshJob) refreshWorker(
 	}
 }
 
-// refreshSingleShipment refreshes a single shipment
 func (j *ShipmentRefreshJob) refreshSingleShipment(ctx context.Context, shipment ShipmentForRefresh) RefreshResult {
 	startTime := time.Now()
 
@@ -216,7 +187,6 @@ func (j *ShipmentRefreshJob) refreshSingleShipment(ctx context.Context, shipment
 		Success:        false,
 	}
 
-	// Wait for rate limiter
 	if err := j.rateLimiter.Wait(ctx); err != nil {
 		result.Error = fmt.Errorf("rate limiter error: %w", err)
 		result.Duration = time.Since(startTime)
@@ -226,13 +196,11 @@ func (j *ShipmentRefreshJob) refreshSingleShipment(ctx context.Context, shipment
 	log.Printf("System refreshing shipment %s (ID: %s)",
 		shipment.ShipmentNumber, shipment.ID)
 
-	// Use the system refresh service (no user authentication required)
 	_, err := j.shipmentService.SystemRefreshShipment(ctx, shipment.ID)
 	if err != nil {
 		log.Printf("Failed to system refresh shipment %s: %v", shipment.ShipmentNumber, err)
 		result.Error = err
 	} else {
-		log.Printf("Successfully system refreshed shipment %s", shipment.ShipmentNumber)
 		result.Success = true
 	}
 
@@ -240,12 +208,10 @@ func (j *ShipmentRefreshJob) refreshSingleShipment(ctx context.Context, shipment
 	return result
 }
 
-// getShipmentsForRefresh gets all shipments that need to be refreshed
 func (j *ShipmentRefreshJob) getShipmentsForRefresh(ctx context.Context) ([]ShipmentForRefresh, error) {
 	return j.shipmentRepo.GetAllShipmentsForRefresh(ctx, j.config.SkipRecentlyUpdated)
 }
 
-// logRefreshStats logs the statistics from a refresh run
 func (j *ShipmentRefreshJob) logRefreshStats(stats RefreshStats) {
 	duration := stats.EndTime.Sub(stats.StartTime)
 
@@ -261,17 +227,14 @@ func (j *ShipmentRefreshJob) logRefreshStats(stats RefreshStats) {
 		}
 	}
 
-	// Log rate limiter status
 	tokensAvailable := j.rateLimiter.TokensAvailable()
 	log.Printf("Rate limiter tokens available: %d", tokensAvailable)
 }
 
-// GetRefreshStats returns a copy of the current refresh configuration
 func (j *ShipmentRefreshJob) GetConfig() ShipmentRefreshConfig {
 	return j.config
 }
 
-// UpdateConfig allows updating the job configuration at runtime
 func (j *ShipmentRefreshJob) UpdateConfig(newConfig ShipmentRefreshConfig) {
 	j.config = newConfig
 	log.Printf("Shipment refresh job configuration updated: %+v", newConfig)
