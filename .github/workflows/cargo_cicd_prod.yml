@@ -76,6 +76,7 @@ jobs:
           $EC2_USER@$EC2_HOST << EOF
             set -e
             cd $EC2_APP_PATH
+            git pull
             
             echo "🔐 Logging into ECR..."
             aws ecr get-login-password --region ca-central-1 | \
