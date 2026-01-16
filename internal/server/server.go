@@ -33,6 +33,21 @@ type Server struct {
 func New(cfg *config.Config, database *db.Database) *Server {
 	e := echo.New()
 
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			start := time.Now()
+			err := next(c)
+			if duration := time.Since(start); duration > 1*time.Second {
+				log.Printf("⚠️ SLOW REQUEST: %s %s took %v",
+					c.Request().Method,
+					c.Request().URL.Path,
+					duration,
+				)
+			}
+			return err
+		}
+	})
+
 	if os.Getenv("APP_ENV") == "production" {
 		e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Skipper: func(c echo.Context) bool {
