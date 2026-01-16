@@ -1,42 +1,29 @@
-# STAGE 1: Builder
-# We use the same base as dev to ensure compatibility
-FROM golang:1.25-alpine AS builder
 
-# Install tools required for building
-RUN apk add --no-cache git
+FROM golang:1.25-alpine
 
-# Install templ (required to generate code before building)
+# Install necessary development tools
+RUN apk add --no-cache gcc musl-dev git
+
+# Install templ
 RUN go install github.com/a-h/templ/cmd/templ@latest
 
+# Set working directory
 WORKDIR /app
 
-# Cache dependencies
+# Copy go.mod and go.sum files
 COPY go.mod go.sum ./
+
+# Download dependencies
 RUN go mod download
 
-# Copy source code
-COPY . .
+# Install air for live reloading in development
+RUN go install github.com/air-verse/air@latest
 
-# 1. Generate templ code
-RUN templ generate
+# Copy air configuration
+COPY .air.toml ./
 
-# 2. Build the binary
-# -ldflags="-s -w" strips debug information to reduce binary size
-# CGO_ENABLED=0 ensures a static binary with no external C dependencies
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o main ./cmd/server
-
-# STAGE 2: Runner
-# Use a tiny Alpine image (5MB) or 'scratch' (empty)
-FROM alpine:latest
-
-WORKDIR /app
-
-# Install certificates (required if your app makes external HTTPS calls)
-RUN apk --no-cache add ca-certificates tzdata
-
-# Copy the compiled binary from the builder stage
-COPY --from=builder /app/main .
-
+# Expose the application port
 EXPOSE 8080
 
-CMD ["./main"]
+# Command for development with hot reload
+CMD ["air", "-c", ".air.toml"]
