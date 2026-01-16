@@ -1,24 +1,22 @@
 services:
     app:
         image: 954222311757.dkr.ecr.ca-central-1.amazonaws.com/cargoapp_main:${IMAGE_TAG}
-        # build:
-        #     context: .
-        #     dockerfile: Dockerfile
-        user: "${UID}:${GID}"
+        
         ports:
             - "8080:8080"
-        volumes:
-            - .:/app
+
         env_file:
             - .env
+
         environment:
-            - GOCACHE=/tmp/go-cache
             - APP_ENV=production
+            - DB_HOST=db
+            - DB_PORT=5432
+            - GODEBUG=netdns=go
+
         depends_on:
             - db
-        tty: true
-        stdin_open: true
-        command: ["sh", "-c", "sleep 5 && air -c .air.toml"] # Wait for DB to be ready
+
         restart: unless-stopped
 
     db:
