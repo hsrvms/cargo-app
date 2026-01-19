@@ -82,6 +82,7 @@ const columnDefs = [
         field: "originPort",
         headerName: "Origin",
         minWidth: 180,
+        flex: 1,
         filter: "agTextColumnFilter",
         valueGetter: (params) => {
             const pol = params.data?.route?.pol;
@@ -98,6 +99,7 @@ const columnDefs = [
         field: "destinationPort",
         headerName: "Destination",
         minWidth: 180,
+        flex: 1,
         filter: "agTextColumnFilter",
         valueGetter: (params) => {
             const pod = params.data?.route?.pod;
@@ -114,6 +116,7 @@ const columnDefs = [
         field: "vesselInfo",
         headerName: "Vessel",
         minWidth: 180,
+        flex: 1,
         filter: "agSetColumnFilter",
         valueGetter: (params) => {
             const vessels = params.data?.vessels;
@@ -151,6 +154,7 @@ const columnDefs = [
         field: "nextETA",
         headerName: "Next ETA",
         minWidth: 100,
+        maxWidth: 100,
         filter: "agDateColumnFilter",
         valueGetter: (params) => {
             const route = params.data?.route;
@@ -180,6 +184,7 @@ const columnDefs = [
         field: "consignee",
         headerName: "Consignee",
         minWidth: 120,
+        flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agTextCellEditor",
@@ -200,6 +205,7 @@ const columnDefs = [
         field: "recipient",
         headerName: "Recipient",
         minWidth: 120,
+        flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agTextCellEditor",
@@ -220,6 +226,7 @@ const columnDefs = [
         field: "shipper",
         headerName: "Shipper",
         minWidth: 120,
+        flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agTextCellEditor",
@@ -240,6 +247,7 @@ const columnDefs = [
         field: "assignedTo",
         headerName: "Assigned To",
         minWidth: 120,
+        flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agTextCellEditor",
@@ -260,6 +268,7 @@ const columnDefs = [
         field: "placeOfLoading",
         headerName: "Place of Loading",
         minWidth: 150,
+        flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agTextCellEditor",
@@ -280,6 +289,7 @@ const columnDefs = [
         field: "placeOfDelivery",
         headerName: "Place of Delivery",
         minWidth: 150,
+        flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agTextCellEditor",
@@ -300,6 +310,7 @@ const columnDefs = [
         field: "finalDestination",
         headerName: "Final Destination",
         minWidth: 150,
+        flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agLargeTextCellEditor",
@@ -448,6 +459,7 @@ const columnDefs = [
         field: "notes",
         headerName: "Notes",
         minWidth: 150,
+        flex: 1.5,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agLargeTextCellEditor",
@@ -544,8 +556,6 @@ const gridOptions = {
     },
 
     onGridReady: (event) => {
-        event.api.sizeColumsToFit();
-
         event.api.setFilterModel({
             shippingStatus: { values: ["IN_TRANSIT", "UNKNOWN", "PLANNED"] },
         });
