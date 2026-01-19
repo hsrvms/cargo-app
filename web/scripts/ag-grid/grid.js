@@ -81,7 +81,7 @@ const columnDefs = [
     {
         field: "originPort",
         headerName: "Origin",
-        minWidth: 180,
+        minWidth: 200,
         flex: 1,
         filter: "agTextColumnFilter",
         valueGetter: (params) => {
@@ -98,7 +98,7 @@ const columnDefs = [
     {
         field: "destinationPort",
         headerName: "Destination",
-        minWidth: 180,
+        minWidth: 200,
         flex: 1,
         filter: "agTextColumnFilter",
         valueGetter: (params) => {
@@ -115,7 +115,7 @@ const columnDefs = [
     {
         field: "vesselInfo",
         headerName: "Vessel",
-        minWidth: 180,
+        minWidth: 200,
         flex: 1,
         filter: "agSetColumnFilter",
         valueGetter: (params) => {
@@ -183,7 +183,7 @@ const columnDefs = [
     {
         field: "consignee",
         headerName: "Consignee",
-        minWidth: 120,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
@@ -204,7 +204,7 @@ const columnDefs = [
     {
         field: "recipient",
         headerName: "Recipient",
-        minWidth: 120,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
@@ -225,7 +225,7 @@ const columnDefs = [
     {
         field: "shipper",
         headerName: "Shipper",
-        minWidth: 120,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
@@ -246,7 +246,7 @@ const columnDefs = [
     {
         field: "assignedTo",
         headerName: "Assigned To",
-        minWidth: 120,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
@@ -267,7 +267,7 @@ const columnDefs = [
     {
         field: "placeOfLoading",
         headerName: "Place of Loading",
-        minWidth: 150,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
@@ -288,7 +288,7 @@ const columnDefs = [
     {
         field: "placeOfDelivery",
         headerName: "Place of Delivery",
-        minWidth: 150,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
@@ -309,7 +309,7 @@ const columnDefs = [
     {
         field: "finalDestination",
         headerName: "Final Destination",
-        minWidth: 150,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
