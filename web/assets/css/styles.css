@@ -26,6 +26,17 @@
     min-width: fit-content;
 }
 
+.ag-cell {
+    overflow: visible !important;
+}
+.ag-row {
+    z-index: 0;
+}
+.ag-row.ag-row-focus,
+.ag-row:hover {
+    z-index: 50;
+}
+
 #grid {
     width: 100% !important;
     overflow-x: visible !important;
