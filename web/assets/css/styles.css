@@ -34,7 +34,7 @@
 }
 .ag-row.ag-row-focus,
 .ag-row:hover {
-    z-index: 50;
+    z-index: 1;
 }
 
 #grid {

@@ -72,7 +72,12 @@ export class ContainerDropdownRenderer {
             const isHidden = dropdown.classList.contains("hidden");
 
             document.querySelectorAll(".container-dropdown-open").forEach((el) => {
-                if (el !== dropdown) el.classList.add("hidden");
+                if (el !== dropdown) {
+                    el.classList.add("hidden");
+                    el.classList.remove("container-dropdown-open");
+                    const otherRow = el.closest(".ag-row");
+                    if (otherRow) otherRow.style.zIndex = "";
+                }
             });
 
             if (isHidden) {
@@ -91,11 +96,17 @@ export class ContainerDropdownRenderer {
                 dropdown.classList.remove("hidden");
                 dropdown.classList.add("container-dropdown-open");
 
+                const currentRow = this.eGui.closest(".ag-row");
+                if (currentRow) currentRow.style.zIndex = "50";
+
                 const svg = button.querySelector("svg");
                 if (svg) svg.style.transform = "rotate(180deg)";
             } else {
                 dropdown.classList.add("hidden");
                 dropdown.classList.remove("container-dropdown-open");
+
+                const currentRow = this.eGui.closest(".ag-row");
+                if (currentRow) currentRow.style.zIndex = "";
 
                 const svg = button.querySelector("svg");
                 if (svg) svg.style.transform = "rotate(0deg)";
@@ -106,6 +117,10 @@ export class ContainerDropdownRenderer {
             if (!this.eGui.contains(event.target)) {
                 dropdown.classList.add("hidden");
                 dropdown.classList.remove("container-dropdown-open");
+
+                const row = this.eGui.closest(".ag-row");
+                if (row) row.style.zIndex = "";
+
                 const svg = button.querySelector("svg");
                 if (svg) svg.style.transform = "rotate(0deg)";
             }
