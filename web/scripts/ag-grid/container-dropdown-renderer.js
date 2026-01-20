@@ -16,7 +16,9 @@ export class ContainerDropdownRenderer {
         }
 
         const button = document.createElement("button");
-        button.className = "flex items-center gap-1 text-cyan-200 hover:text-blue-800 font-medium focus:outline-none";
+        button.className = "flex items-center gap-1 font-medium rounded-md px-1  transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 " +
+            "text-cyan-700 hover:text-cyan-900 hover:bg-cyan-50 " +
+            "dark:text-cyan-400 dark:hover:text-cyan-200 dark:hover:bg-cyan-900/30";
         button.innerHTML = `
       <span>${this.containers.length} Container${this.containers.length > 1 ? "s" : ""}</span>
       <svg class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>

@@ -62,7 +62,6 @@ const columnDefs = [
         field: "shipmentDate",
         headerName: "Shipment Date",
         width: 160,
-        minWidth: 120,
         filter: "agDateColumnFilter",
         valueGetter: (params) => {
             const dateVal = params.data.containers[0]?.events[0]?.date;
@@ -81,7 +80,7 @@ const columnDefs = [
     {
         field: "originPort",
         headerName: "Origin",
-        minWidth: 200,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         valueGetter: (params) => {
@@ -91,14 +90,12 @@ const columnDefs = [
             }
             return "N/A";
         },
-        cellRenderer: (params) => {
-            return params.value;
-        },
+        cellRenderer: createTruncatedRenderer(),
     },
     {
         field: "destinationPort",
         headerName: "Destination",
-        minWidth: 200,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
         valueGetter: (params) => {
@@ -108,14 +105,12 @@ const columnDefs = [
             }
             return "N/A";
         },
-        cellRenderer: (params) => {
-            return params.value;
-        },
+        cellRenderer: createTruncatedRenderer(),
     },
     {
         field: "vesselInfo",
         headerName: "Vessel",
-        minWidth: 200,
+        minWidth: 180,
         flex: 1,
         filter: "agSetColumnFilter",
         valueGetter: (params) => {
@@ -126,15 +121,12 @@ const columnDefs = [
             }
             return "N/A";
         },
-        cellRenderer: (params) => {
-            return params.value;
-        },
+        cellRenderer: createTruncatedRenderer(),
     },
     {
         field: "containerCount",
         headerName: "Containers",
-        maxWidth: 130,
-        minWidth: 120,
+        width: 120,
         filter: "agTextColumnFilter",
         filterValueGetter: (params) => {
             const containers = params.data?.containers;
@@ -153,8 +145,7 @@ const columnDefs = [
     {
         field: "nextETA",
         headerName: "Next ETA",
-        minWidth: 100,
-        maxWidth: 100,
+        width: 100,
         filter: "agDateColumnFilter",
         valueGetter: (params) => {
             const route = params.data?.route;
@@ -187,16 +178,14 @@ const columnDefs = [
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
-        tooltipField: "consignee",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            const value = params.value;
-            if (value.length > 20) {
-                return `<span title="${value}">${value.substring(0, 17)}...</span>`;
-            }
-            return value;
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
         },
+        tooltipField: "consignee",
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "consignee", params.newValue || "");
         },
@@ -208,16 +197,14 @@ const columnDefs = [
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
-        tooltipField: "recipient",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            const value = params.value;
-            if (value.length > 20) {
-                return `<span title="${value}">${value.substring(0, 17)}...</span>`;
-            }
-            return value;
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
         },
+        tooltipField: "recipient",
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "recipient", params.newValue || "");
         },
@@ -229,16 +216,14 @@ const columnDefs = [
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
-        tooltipField: "shipper",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            const value = params.value;
-            if (value.length > 20) {
-                return `<span title="${value}">${value.substring(0, 17)}...</span>`;
-            }
-            return value;
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
         },
+        tooltipField: "shipper",
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "shipper", params.newValue || "");
         },
@@ -250,16 +235,14 @@ const columnDefs = [
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
-        tooltipField: "assignedTo",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not assigned</span>';
-            const value = params.value;
-            if (value.length > 18) {
-                return `<span title="${value}">${value.substring(0, 15)}...</span>`;
-            }
-            return value;
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
         },
+        tooltipField: "assignedTo",
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "assignedTo", params.newValue || "");
         },
@@ -271,16 +254,14 @@ const columnDefs = [
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
-        tooltipField: "placeOfLoading",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            const value = params.value;
-            if (value.length > 25) {
-                return `<span title="${value}">${value.substring(0, 22)}...</span>`;
-            }
-            return value;
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
         },
+        tooltipField: "placeOfLoading",
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "placeOfLoading", params.newValue || "");
         },
@@ -292,16 +273,14 @@ const columnDefs = [
         flex: 1,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
-        tooltipField: "placeOfDelivery",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            const value = params.value;
-            if (value.length > 25) {
-                return `<span title="${value}">${value.substring(0, 22)}...</span>`;
-            }
-            return value;
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
         },
+        tooltipField: "placeOfDelivery",
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "placeOfDelivery", params.newValue || "");
         },
@@ -320,14 +299,7 @@ const columnDefs = [
             cols: 40,
         },
         tooltipField: "finalDestination",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            const value = params.value;
-            if (value.length > 30) {
-                return `<span title="${value}">${value.substring(0, 27)}...</span>`;
-            }
-            return value;
-        },
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "finalDestination", params.newValue || "");
         },
@@ -344,7 +316,7 @@ const columnDefs = [
         },
         tooltipField: "containerType",
         cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
+            if (!params.value) return '<span class="text-gray-400 italic">N/A</span>';
             return `<span class="px-2 py-1 text-xs font-mono bg-blue-100 text-blue-800 rounded">${params.value}</span>`;
         },
         onCellValueChanged: (params) => {
@@ -357,10 +329,15 @@ const columnDefs = [
         minWidth: 100,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
+        },
         tooltipField: "mbl",
         cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
+            if (!params.value) return '<span class="text-gray-400 italic">N/A</span>';
             return `<span class="font-mono text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs">${params.value}</span>`;
         },
         onCellValueChanged: (params) => {
@@ -373,16 +350,14 @@ const columnDefs = [
         minWidth: 120,
         filter: "agTextColumnFilter",
         editable: true,
-        cellEditor: "agTextCellEditor",
-        tooltipField: "customs",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            const value = params.value;
-            if (value.length > 20) {
-                return `<span title="${value}">${value.substring(0, 17)}...</span>`;
-            }
-            return value;
+        cellEditor: "agLargeTextCellEditor",
+        cellEditorParams: {
+            maxLength: 1000,
+            rows: 3,
+            cols: 40,
         },
+        tooltipField: "customs",
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "customs", params.newValue || "");
         },
@@ -395,10 +370,7 @@ const columnDefs = [
         editable: true,
         cellEditor: "agTextCellEditor",
         tooltipField: "invoiceAmount",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
-            return `<span class="font-mono text-green-700">${params.value}</span>`;
-        },
+        cellRenderer: createTruncatedRenderer(),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "invoiceAmount", params.newValue || "");
         },
@@ -406,13 +378,13 @@ const columnDefs = [
     {
         field: "cost",
         headerName: "Cost",
-        minWidth: 100,
+        width: 100,
         filter: "agTextColumnFilter",
         editable: true,
         cellEditor: "agTextCellEditor",
         tooltipField: "cost",
         cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">Not specified</span>';
+            if (!params.value) return '<span class="text-gray-400 italic">N/A</span>';
             return `<span class="font-mono text-orange-700">${params.value}</span>`;
         },
         onCellValueChanged: (params) => {
@@ -422,7 +394,7 @@ const columnDefs = [
     {
         field: "customsProcessed",
         headerName: "Customs ✓",
-        minWidth: 90,
+        width: 110,
         filter: false,
         editable: true,
         cellRenderer: "agCheckboxCellRenderer",
@@ -434,7 +406,7 @@ const columnDefs = [
     {
         field: "invoiced",
         headerName: "Invoiced ✓",
-        minWidth: 90,
+        width: 110,
         filter: false,
         editable: true,
         cellRenderer: "agCheckboxCellRenderer",
@@ -446,7 +418,7 @@ const columnDefs = [
     {
         field: "paymentReceived",
         headerName: "Payment ✓",
-        minWidth: 90,
+        width: 110,
         filter: false,
         editable: true,
         cellRenderer: "agCheckboxCellRenderer",
@@ -469,14 +441,7 @@ const columnDefs = [
             cols: 50,
         },
         tooltipField: "notes",
-        cellRenderer: (params) => {
-            if (!params.value) return '<span class="text-gray-400 italic">No notes</span>';
-            const value = params.value;
-            if (value.length > 50) {
-                return `<span title="${value}" class="cursor-help">${value.substring(0, 47)}...</span>`;
-            }
-            return value;
-        },
+        cellRenderer: createTruncatedRenderer('<span class="text-gray-400 italic">No notes</span>'),
         onCellValueChanged: (params) => {
             updateShipmentField(params.data.id, "notes", params.newValue || "");
         },
@@ -504,7 +469,6 @@ const gridOptions = {
         sortable: true,
         filter: true,
         suppressHeaderFilterButton: false,
-        minWidth: 120,
     },
     rowSelection,
     pagination: true,
@@ -699,4 +663,23 @@ function updateShipmentField(shipmentId, field, value) {
                 loadShipments(window.gridApi);
             }
         });
+}
+
+/**
+ * Generates a cell renderer that truncates text with CSS and shows a tooltip.
+ * @param {string} placeholder - Text to show if value is null/empty (default: "N/A")
+ */
+function createTruncatedRenderer(placeholder = '<span class="text-gray-400 italic">N/A</span>') {
+    return (params) => {
+        if (!params.value) return placeholder;
+
+        return `
+              <span
+                title="${params.value}"
+                class="block w-full truncate cursor-help"
+              >
+                ${params.value}
+              </span>
+            `;
+    };
 }
