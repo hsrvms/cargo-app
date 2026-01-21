@@ -70,6 +70,20 @@ type ShipmentRepository interface {
 	DeleteUserShipment(ctx context.Context, userID, shipmentID uuid.UUID) error
 	BulkDeleteUserShipments(ctx context.Context, userID uuid.UUID, shipmentIDs []uuid.UUID) error
 	GetAllShipmentsForRefresh(ctx context.Context, skipRecentlyUpdated time.Duration) ([]ShipmentForRefresh, error)
+	GetShipmentsWithDetailsForGrid(ctx context.Context, userID uuid.UUID) ([]models.Shipment, error)
+
+	ConvertContainerEventToDTO(ctx context.Context, event models.ContainerEvent) (dto.ShipmentContainerEventResponse, error)
+	ConvertRouteToDTO(routes []models.ShipmentRoute) dto.ShipmentRouteResponse
+	ConvertRouteSegmentToDTO(ctx context.Context, segment models.RouteSegment) (dto.ShipmentRouteSegmentResponse, error)
+	ConvertLocationsToDTO(locations []models.Location) []dto.ShipmentLocationResponse
+	ConvertLocationToDTO(location models.Location) dto.ShipmentLocationResponse
+	ConvertVesselsToDTO(vessels []models.Vessel) []dto.ShipmentVesselResponse
+	ConvertVesselToDTO(vessel models.Vessel) dto.ShipmentVesselResponse
+	ConvertFacilitiesToDTO(facilities []models.Facility) []dto.ShipmentFacilityResponse
+	ConvertFacilityToDTO(facility models.Facility) dto.ShipmentFacilityResponse
+
+	GetShipmentDate(containers []dto.ShipmentContainerResponse) (*time.Time, error)
+	MapShipmentToDTO(ctx context.Context, shipment models.Shipment) dto.ShipmentDetailsResponse
 }
 
 type shipmentRepository struct {
@@ -81,7 +95,6 @@ func NewShipmentRepository(db *db.Database) ShipmentRepository {
 		log.Printf("failed to migrate shipments: %s", err)
 	}
 
-	// Fix the shipment route constraint to include ShipmentID
 	if err := models.FixShipmentRouteConstraint(db.DB); err != nil {
 		log.Printf("failed to fix shipment route constraint: %s", err)
 	}
@@ -221,13 +234,11 @@ func (r *shipmentRepository) UpdateShipment(ctx context.Context, id uuid.UUID, u
 func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uuid.UUID, location *models.Location) (*models.Location, error) {
 	db := r.getDBFromContext(ctx)
 
-	// Try to find existing location by locode
 	var existingLocation models.Location
 	err := db.WithContext(ctx).Where("locode = ?", location.Locode).First(&existingLocation).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Location doesn't exist, create new one
 			err = db.WithContext(ctx).Create(location).Error
 			if err != nil {
 				return nil, err
@@ -236,7 +247,6 @@ func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uui
 			return nil, err
 		}
 	} else {
-		// Location exists, update it with fresh data
 		existingLocation.Name = location.Name
 		existingLocation.State = location.State
 		existingLocation.Country = location.Country
@@ -249,7 +259,7 @@ func (r *shipmentRepository) CreateLocation(ctx context.Context, shipmentID *uui
 		if err != nil {
 			return nil, err
 		}
-		*location = existingLocation // Update the passed location with the existing ID
+		*location = existingLocation
 	}
 
 	if shipmentID != nil {
@@ -291,13 +301,11 @@ func (r *shipmentRepository) FindLocationByID(ctx context.Context, id uuid.UUID)
 func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.ShipmentRoute) (*models.ShipmentRoute, error) {
 	db := r.getDBFromContext(ctx)
 
-	// Check if route already exists using the unique constraint fields
 	var existingRoute models.ShipmentRoute
 	err := db.WithContext(ctx).Where("shipment_id = ? AND location_id = ? AND route_type = ?",
 		route.ShipmentID, route.LocationID, route.RouteType).First(&existingRoute).Error
 
 	if err == nil {
-		// Route already exists, update it with new data
 		existingRoute.Date = route.Date
 		existingRoute.Actual = route.Actual
 		existingRoute.PredictiveETA = route.PredictiveETA
@@ -307,11 +315,9 @@ func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.Ship
 		}
 		return &existingRoute, nil
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		// Some other error occurred
 		return nil, fmt.Errorf("failed to check for existing route: %w", err)
 	}
 
-	// Route doesn't exist, create new one
 	err = db.WithContext(ctx).Create(route).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to create route: %w", err)
@@ -322,13 +328,11 @@ func (r *shipmentRepository) CreateRoute(ctx context.Context, route *models.Ship
 func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.UUID, vessel *models.Vessel) (*models.Vessel, error) {
 	db := r.getDBFromContext(ctx)
 
-	// Try to find existing vessel by IMO
 	var existingVessel models.Vessel
 	err := db.WithContext(ctx).Where("imo = ?", vessel.Imo).First(&existingVessel).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Vessel doesn't exist, create new one
 			err = db.WithContext(ctx).Create(vessel).Error
 			if err != nil {
 				return nil, err
@@ -337,7 +341,6 @@ func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.
 			return nil, err
 		}
 	} else {
-		// Vessel exists, update it with fresh data
 		existingVessel.Name = vessel.Name
 		existingVessel.Mmsi = vessel.Mmsi
 		existingVessel.CallSign = vessel.CallSign
@@ -347,7 +350,7 @@ func (r *shipmentRepository) CreateVessel(ctx context.Context, shipmentID *uuid.
 		if err != nil {
 			return nil, err
 		}
-		*vessel = existingVessel // Update the passed vessel with the existing ID
+		*vessel = existingVessel
 	}
 
 	if shipmentID != nil {
@@ -390,13 +393,11 @@ func (r *shipmentRepository) FindVesselByID(ctx context.Context, id *uuid.UUID) 
 func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uuid.UUID, facility *models.Facility) (*models.Facility, error) {
 	db := r.getDBFromContext(ctx)
 
-	// Try to find existing facility by name
 	var existingFacility models.Facility
 	err := db.WithContext(ctx).Where("name = ?", facility.Name).First(&existingFacility).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Facility doesn't exist, create new one
 			err = db.WithContext(ctx).Create(facility).Error
 			if err != nil {
 				return nil, err
@@ -405,7 +406,6 @@ func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uui
 			return nil, err
 		}
 	} else {
-		// Facility exists, update it with fresh data
 		existingFacility.CountryCode = facility.CountryCode
 		existingFacility.Locode = facility.Locode
 		existingFacility.BicCode = facility.BicCode
@@ -417,7 +417,7 @@ func (r *shipmentRepository) CreateFacility(ctx context.Context, shipmentID *uui
 		if err != nil {
 			return nil, err
 		}
-		*facility = existingFacility // Update the passed facility with the existing ID
+		*facility = existingFacility
 	}
 
 	if shipmentID != nil {
@@ -458,13 +458,11 @@ func (r *shipmentRepository) FindFacilityByID(ctx context.Context, id *uuid.UUID
 func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uuid.UUID, container *models.Container) (*models.Container, error) {
 	db := r.getDBFromContext(ctx)
 
-	// Try to find existing container by number
 	var existingContainer models.Container
 	err := db.WithContext(ctx).Where("number = ?", container.Number).First(&existingContainer).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Container doesn't exist, create new one
 			err = db.WithContext(ctx).Create(container).Error
 			if err != nil {
 				return nil, err
@@ -473,7 +471,6 @@ func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uu
 			return nil, err
 		}
 	} else {
-		// Container exists, update it with fresh data
 		existingContainer.IsoCode = container.IsoCode
 		existingContainer.SizeType = container.SizeType
 		existingContainer.Status = container.Status
@@ -482,7 +479,7 @@ func (r *shipmentRepository) CreateContainer(ctx context.Context, shipmentID *uu
 		if err != nil {
 			return nil, err
 		}
-		*container = existingContainer // Update the passed container with the existing ID
+		*container = existingContainer
 	}
 
 	if shipmentID != nil {
@@ -549,7 +546,7 @@ func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID 
 
 	err := r.db.DB.WithContext(ctx).
 		Where("shipment_id = ?", shipmentID).
-		Order("updated_at DESC"). // latest snapshot
+		Order("updated_at DESC").
 		First(&aisModel).Error
 
 	if err != nil {
@@ -559,7 +556,6 @@ func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID 
 		return nil, err
 	}
 
-	// Convert to DTO
 	aisResponse := dto.ShipmentAisResponse{
 		Status:                   aisModel.Status,
 		LastEventDescription:     aisModel.LastEventDescription,
@@ -586,13 +582,12 @@ func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID 
 		UpdatedAt:                aisModel.UpdatedAt,
 	}
 
-	// Fetch vessel data if VesselID is present
 	if aisModel.VesselID != nil {
 		vessel, err := r.FindVesselByID(ctx, aisModel.VesselID)
 		if err != nil {
 			return nil, err
 		}
-		vesselResponse := r.convertVesselToDTO(*vessel)
+		vesselResponse := r.ConvertVesselToDTO(*vessel)
 		aisResponse.Vessel = &vesselResponse
 	}
 
@@ -605,7 +600,6 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 		return nil, err
 	}
 
-	// Get user-specific shipment info
 	var userShipment models.UserShipment
 	if err := r.db.DB.WithContext(ctx).
 		Where("user_id = ? AND shipment_id = ?", userID, shipmentID).
@@ -676,7 +670,7 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 		RouteData:        routeData,
 	}
 
-	shipmentDate, err := getShipmentDate(containers)
+	shipmentDate, err := r.GetShipmentDate(containers)
 	if err == nil {
 		response.ShipmentDate = shipmentDate
 	}
@@ -684,7 +678,6 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 	return response, nil
 }
 
-// getShipmentLocations fetches and converts shipment locations
 func (r *shipmentRepository) getShipmentLocations(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentLocationResponse, error) {
 	var locations []models.Location
 	err := r.db.DB.WithContext(ctx).
@@ -696,10 +689,9 @@ func (r *shipmentRepository) getShipmentLocations(ctx context.Context, shipmentI
 		return nil, err
 	}
 
-	return r.convertLocationsToDTO(locations), nil
+	return r.ConvertLocationsToDTO(locations), nil
 }
 
-// getShipmentRoute fetches and converts shipment route
 func (r *shipmentRepository) getShipmentRoute(ctx context.Context, shipmentID uuid.UUID) (dto.ShipmentRouteResponse, error) {
 	var routes []models.ShipmentRoute
 	err := r.db.DB.WithContext(ctx).
@@ -710,10 +702,9 @@ func (r *shipmentRepository) getShipmentRoute(ctx context.Context, shipmentID uu
 		return dto.ShipmentRouteResponse{}, err
 	}
 
-	return r.convertRouteToDTO(routes), nil
+	return r.ConvertRouteToDTO(routes), nil
 }
 
-// getShipmentVessels fetches and converts shipment vessels
 func (r *shipmentRepository) getShipmentVessels(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentVesselResponse, error) {
 	var vessels []models.Vessel
 	err := r.db.DB.WithContext(ctx).
@@ -725,10 +716,9 @@ func (r *shipmentRepository) getShipmentVessels(ctx context.Context, shipmentID 
 		return nil, err
 	}
 
-	return r.convertVesselsToDTO(vessels), nil
+	return r.ConvertVesselsToDTO(vessels), nil
 }
 
-// getShipmentFacilities fetches and converts shipment facilities
 func (r *shipmentRepository) getShipmentFacilities(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentFacilityResponse, error) {
 	var facilities []models.Facility
 	err := r.db.DB.WithContext(ctx).
@@ -740,10 +730,9 @@ func (r *shipmentRepository) getShipmentFacilities(ctx context.Context, shipment
 		return nil, err
 	}
 
-	return r.convertFacilitiesToDTO(facilities), nil
+	return r.ConvertFacilitiesToDTO(facilities), nil
 }
 
-// getShipmentContainers fetches and converts shipment containers with events
 func (r *shipmentRepository) getShipmentContainers(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentContainerResponse, error) {
 	var containers []models.Container
 	err := r.db.DB.WithContext(ctx).
@@ -774,7 +763,6 @@ func (r *shipmentRepository) getShipmentContainers(ctx context.Context, shipment
 	return containersResponse, nil
 }
 
-// getContainerEvents fetches and converts container events
 func (r *shipmentRepository) getContainerEvents(ctx context.Context, containerID uuid.UUID) ([]dto.ShipmentContainerEventResponse, error) {
 	var containerEvents []models.ContainerEvent
 	err := r.db.DB.WithContext(ctx).
@@ -786,7 +774,7 @@ func (r *shipmentRepository) getContainerEvents(ctx context.Context, containerID
 
 	eventResponses := make([]dto.ShipmentContainerEventResponse, len(containerEvents))
 	for i, event := range containerEvents {
-		eventResponse, err := r.convertContainerEventToDTO(ctx, event)
+		eventResponse, err := r.ConvertContainerEventToDTO(ctx, event)
 		if err != nil {
 			return nil, err
 		}
@@ -796,15 +784,24 @@ func (r *shipmentRepository) getContainerEvents(ctx context.Context, containerID
 	return eventResponses, nil
 }
 
-// convertContainerEventToDTO converts a container event to DTO with related data
-func (r *shipmentRepository) convertContainerEventToDTO(ctx context.Context, event models.ContainerEvent) (dto.ShipmentContainerEventResponse, error) {
-	location, err := r.FindLocationByID(ctx, event.LocationID)
-	if err != nil {
-		return dto.ShipmentContainerEventResponse{}, err
+func (r *shipmentRepository) ConvertContainerEventToDTO(ctx context.Context, event models.ContainerEvent) (dto.ShipmentContainerEventResponse, error) {
+
+	var locationResponse dto.ShipmentLocationResponse
+
+	if event.LocationID != uuid.Nil {
+		if event.Location.ID != uuid.Nil {
+			locationResponse = r.ConvertLocationToDTO(event.Location)
+		} else {
+			location, err := r.FindLocationByID(ctx, event.LocationID)
+			if err != nil {
+				return dto.ShipmentContainerEventResponse{}, err
+			}
+			locationResponse = r.ConvertLocationToDTO(*location)
+		}
 	}
 
 	eventResponse := dto.ShipmentContainerEventResponse{
-		Location:          r.convertLocationToDTO(*location),
+		Location:          locationResponse,
 		Description:       event.Description,
 		EventType:         event.EventType,
 		EventCode:         event.EventCode,
@@ -818,27 +815,35 @@ func (r *shipmentRepository) convertContainerEventToDTO(ctx context.Context, eve
 	}
 
 	if event.FacilityID != nil {
-		facility, err := r.FindFacilityByID(ctx, event.FacilityID)
-		if err != nil {
-			return dto.ShipmentContainerEventResponse{}, err
+		if event.Facility != nil && event.Facility.ID != uuid.Nil {
+			facilityResponse := r.ConvertFacilityToDTO(*event.Facility)
+			eventResponse.Facility = &facilityResponse
+		} else {
+			fac, err := r.FindFacilityByID(ctx, event.FacilityID)
+			if err == nil {
+				fDto := r.ConvertFacilityToDTO(*fac)
+				eventResponse.Facility = &fDto
+			}
 		}
-		facilityResponse := r.convertFacilityToDTO(*facility)
-		eventResponse.Facility = &facilityResponse
 	}
 
 	if event.VesselID != nil {
-		vessel, err := r.FindVesselByID(ctx, event.VesselID)
-		if err != nil {
-			return dto.ShipmentContainerEventResponse{}, err
+		if event.Vessel != nil && event.Vessel.ID != uuid.Nil {
+			vesselResponse := r.ConvertVesselToDTO(*event.Vessel)
+			eventResponse.Vessel = &vesselResponse
+		} else {
+			ves, err := r.FindVesselByID(ctx, event.VesselID)
+			if err == nil {
+				vDto := r.ConvertVesselToDTO(*ves)
+				eventResponse.Vessel = &vDto
+			}
 		}
-		vesselResponse := r.convertVesselToDTO(*vessel)
-		eventResponse.Vessel = &vesselResponse
 	}
 
 	return eventResponse, nil
+
 }
 
-// getShipmentRouteData fetches and assembles route data including segments, coordinates, and AIS
 func (r *shipmentRepository) getShipmentRouteData(ctx context.Context, shipmentID, shipmentDbID uuid.UUID) (dto.ShipmentRouteDataResponse, error) {
 	routeSegments, err := r.getShipmentRouteSegments(ctx, shipmentID)
 	if err != nil {
@@ -865,7 +870,6 @@ func (r *shipmentRepository) getShipmentRouteData(ctx context.Context, shipmentI
 	}, nil
 }
 
-// getShipmentRouteSegments fetches and converts route segments
 func (r *shipmentRepository) getShipmentRouteSegments(ctx context.Context, shipmentID uuid.UUID) ([]dto.ShipmentRouteSegmentResponse, error) {
 	var routeSegments []models.RouteSegment
 	err := r.db.DB.WithContext(ctx).
@@ -878,7 +882,7 @@ func (r *shipmentRepository) getShipmentRouteSegments(ctx context.Context, shipm
 
 	routeSegmentsResponse := make([]dto.ShipmentRouteSegmentResponse, 0, len(routeSegments))
 	for _, segment := range routeSegments {
-		segmentResponse, err := r.convertRouteSegmentToDTO(ctx, segment)
+		segmentResponse, err := r.ConvertRouteSegmentToDTO(ctx, segment)
 		if err != nil {
 			return nil, err
 		}
@@ -888,8 +892,7 @@ func (r *shipmentRepository) getShipmentRouteSegments(ctx context.Context, shipm
 	return routeSegmentsResponse, nil
 }
 
-// convertRouteSegmentToDTO converts a route segment with its points to DTO
-func (r *shipmentRepository) convertRouteSegmentToDTO(ctx context.Context, segment models.RouteSegment) (dto.ShipmentRouteSegmentResponse, error) {
+func (r *shipmentRepository) ConvertRouteSegmentToDTO(ctx context.Context, segment models.RouteSegment) (dto.ShipmentRouteSegmentResponse, error) {
 	var routeSegmentPoints []models.RouteSegmentPoint
 	err := r.db.DB.WithContext(ctx).
 		Where("segment_id = ?", segment.ID).
@@ -915,7 +918,6 @@ func (r *shipmentRepository) convertRouteSegmentToDTO(ctx context.Context, segme
 	}, nil
 }
 
-// getShipmentCoordinates fetches the latest coordinates for a shipment
 func (r *shipmentRepository) getShipmentCoordinates(ctx context.Context, shipmentID uuid.UUID) (dto.ShipmentCoordinatesResponse, error) {
 	var shipmentCoordinates *models.Coordinate
 	err := r.db.DB.WithContext(ctx).
@@ -933,17 +935,15 @@ func (r *shipmentRepository) getShipmentCoordinates(ctx context.Context, shipmen
 	}, nil
 }
 
-// Helper methods for converting models to DTOs
-
-func (r *shipmentRepository) convertLocationsToDTO(locations []models.Location) []dto.ShipmentLocationResponse {
+func (r *shipmentRepository) ConvertLocationsToDTO(locations []models.Location) []dto.ShipmentLocationResponse {
 	locationResponses := make([]dto.ShipmentLocationResponse, len(locations))
 	for i, loc := range locations {
-		locationResponses[i] = r.convertLocationToDTO(loc)
+		locationResponses[i] = r.ConvertLocationToDTO(loc)
 	}
 	return locationResponses
 }
 
-func (r *shipmentRepository) convertLocationToDTO(location models.Location) dto.ShipmentLocationResponse {
+func (r *shipmentRepository) ConvertLocationToDTO(location models.Location) dto.ShipmentLocationResponse {
 	return dto.ShipmentLocationResponse{
 		Name:        location.Name,
 		State:       location.State,
@@ -956,11 +956,11 @@ func (r *shipmentRepository) convertLocationToDTO(location models.Location) dto.
 	}
 }
 
-func (r *shipmentRepository) convertRouteToDTO(routes []models.ShipmentRoute) dto.ShipmentRouteResponse {
+func (r *shipmentRepository) ConvertRouteToDTO(routes []models.ShipmentRoute) dto.ShipmentRouteResponse {
 	routeResponse := dto.ShipmentRouteResponse{}
 	for _, route := range routes {
 		item := &dto.ShipmentRoutePoint{
-			Location:      r.convertLocationToDTO(route.Location),
+			Location:      r.ConvertLocationToDTO(route.Location),
 			Date:          route.Date,
 			Actual:        route.Actual,
 			PredictiveETA: route.PredictiveETA,
@@ -979,15 +979,15 @@ func (r *shipmentRepository) convertRouteToDTO(routes []models.ShipmentRoute) dt
 	return routeResponse
 }
 
-func (r *shipmentRepository) convertVesselsToDTO(vessels []models.Vessel) []dto.ShipmentVesselResponse {
+func (r *shipmentRepository) ConvertVesselsToDTO(vessels []models.Vessel) []dto.ShipmentVesselResponse {
 	vesselResponses := make([]dto.ShipmentVesselResponse, len(vessels))
 	for i, vessel := range vessels {
-		vesselResponses[i] = r.convertVesselToDTO(vessel)
+		vesselResponses[i] = r.ConvertVesselToDTO(vessel)
 	}
 	return vesselResponses
 }
 
-func (r *shipmentRepository) convertVesselToDTO(vessel models.Vessel) dto.ShipmentVesselResponse {
+func (r *shipmentRepository) ConvertVesselToDTO(vessel models.Vessel) dto.ShipmentVesselResponse {
 	return dto.ShipmentVesselResponse{
 		Name:     vessel.Name,
 		Imo:      vessel.Imo,
@@ -997,15 +997,15 @@ func (r *shipmentRepository) convertVesselToDTO(vessel models.Vessel) dto.Shipme
 	}
 }
 
-func (r *shipmentRepository) convertFacilitiesToDTO(facilities []models.Facility) []dto.ShipmentFacilityResponse {
+func (r *shipmentRepository) ConvertFacilitiesToDTO(facilities []models.Facility) []dto.ShipmentFacilityResponse {
 	facilityResponses := make([]dto.ShipmentFacilityResponse, len(facilities))
 	for i, facility := range facilities {
-		facilityResponses[i] = r.convertFacilityToDTO(facility)
+		facilityResponses[i] = r.ConvertFacilityToDTO(facility)
 	}
 	return facilityResponses
 }
 
-func (r *shipmentRepository) convertFacilityToDTO(facility models.Facility) dto.ShipmentFacilityResponse {
+func (r *shipmentRepository) ConvertFacilityToDTO(facility models.Facility) dto.ShipmentFacilityResponse {
 	return dto.ShipmentFacilityResponse{
 		Name:        facility.Name,
 		CountryCode: facility.CountryCode,
@@ -1016,8 +1016,6 @@ func (r *shipmentRepository) convertFacilityToDTO(facility models.Facility) dto.
 		Longitude:   *facility.Longitude,
 	}
 }
-
-// Delete methods for cleaning up shipment related data
 
 func (r *shipmentRepository) DeleteShipmentLocations(ctx context.Context, shipmentID uuid.UUID) error {
 	if shipmentID == uuid.Nil {
@@ -1163,68 +1161,55 @@ func (r *shipmentRepository) DeleteShipmentAis(ctx context.Context, shipmentID u
 	return nil
 }
 
-// DeleteAllShipmentRelatedData deletes all related data for a shipment in the correct order
 func (r *shipmentRepository) DeleteAllShipmentRelatedData(ctx context.Context, shipmentID uuid.UUID) error {
-	// Validate input
 	if shipmentID == uuid.Nil {
 		return fmt.Errorf("invalid shipment ID: cannot be nil")
 	}
 
 	log.Printf("Starting cleanup of all related data for shipment ID: %s", shipmentID)
 
-	// Delete in reverse order of dependencies to avoid constraint violations
-	// Keep track of what was deleted for rollback if needed
-
-	// Delete AIS data
 	log.Printf("Deleting AIS data for shipment %s", shipmentID)
 	if err := r.DeleteShipmentAis(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete AIS data for shipment %s: %v", shipmentID, err)
 		return fmt.Errorf("failed to delete AIS data: %w", err)
 	}
 
-	// Delete coordinates
 	log.Printf("Deleting coordinates for shipment %s", shipmentID)
 	if err := r.DeleteShipmentCoordinates(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete coordinates for shipment %s: %v", shipmentID, err)
 		return fmt.Errorf("failed to delete coordinates: %w", err)
 	}
 
-	// Delete route segments (this will cascade delete route segment points)
 	log.Printf("Deleting route segments for shipment %s", shipmentID)
 	if err := r.DeleteRouteSegments(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete route segments for shipment %s: %v", shipmentID, err)
 		return fmt.Errorf("failed to delete route segments: %w", err)
 	}
 
-	// Delete container relationships (this will cascade delete container events)
 	log.Printf("Deleting container relationships for shipment %s", shipmentID)
 	if err := r.DeleteShipmentContainers(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete containers for shipment %s: %v", shipmentID, err)
 		return fmt.Errorf("failed to delete containers: %w", err)
 	}
 
-	// Delete facility relationships
 	log.Printf("Deleting facility relationships for shipment %s", shipmentID)
 	if err := r.DeleteShipmentFacilities(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete facilities for shipment %s: %v", shipmentID, err)
 		return fmt.Errorf("failed to delete facilities: %w", err)
 	}
 
-	// Delete vessel relationships
 	log.Printf("Deleting vessel relationships for shipment %s", shipmentID)
 	if err := r.DeleteShipmentVessels(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete vessels for shipment %s: %v", shipmentID, err)
 		return fmt.Errorf("failed to delete vessels: %w", err)
 	}
 
-	// Delete routes
 	log.Printf("Deleting routes for shipment %s", shipmentID)
 	if err := r.DeleteShipmentRoutes(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete routes for shipment %s: %v", shipmentID, err)
 		return fmt.Errorf("failed to delete routes: %w", err)
 	}
 
-	// Delete location relationships
 	log.Printf("Deleting location relationships for shipment %s", shipmentID)
 	if err := r.DeleteShipmentLocations(ctx, shipmentID); err != nil {
 		log.Printf("Failed to delete locations for shipment %s: %v", shipmentID, err)
@@ -1235,12 +1220,10 @@ func (r *shipmentRepository) DeleteAllShipmentRelatedData(ctx context.Context, s
 	return nil
 }
 
-// GetDB returns the database instance
 func (r *shipmentRepository) GetDB() *db.Database {
 	return r.db
 }
 
-// getDBFromContext extracts database instance from context or returns default
 func (r *shipmentRepository) getDBFromContext(ctx context.Context) *gorm.DB {
 	if tx, ok := ctx.Value("tx").(*gorm.DB); ok {
 		return tx
@@ -1248,7 +1231,6 @@ func (r *shipmentRepository) getDBFromContext(ctx context.Context) *gorm.DB {
 	return r.db.DB
 }
 
-// ShipmentDataSummary holds counts of related data for a shipment
 type ShipmentDataSummary struct {
 	ShipmentID           uuid.UUID `json:"shipmentId"`
 	LocationsCount       int64     `json:"locationsCount"`
@@ -1262,7 +1244,6 @@ type ShipmentDataSummary struct {
 	AisCount             int64     `json:"aisCount"`
 }
 
-// GetShipmentDataSummary returns a summary of all related data for a shipment
 func (r *shipmentRepository) GetShipmentDataSummary(ctx context.Context, shipmentID uuid.UUID) (*ShipmentDataSummary, error) {
 	if shipmentID == uuid.Nil {
 		return nil, fmt.Errorf("invalid shipment ID: cannot be nil")
@@ -1271,32 +1252,26 @@ func (r *shipmentRepository) GetShipmentDataSummary(ctx context.Context, shipmen
 	db := r.getDBFromContext(ctx)
 	summary := &ShipmentDataSummary{ShipmentID: shipmentID}
 
-	// Count locations
 	if err := db.WithContext(ctx).Model(&models.ShipmentLocation{}).Where("shipment_id = ?", shipmentID).Count(&summary.LocationsCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count locations: %w", err)
 	}
 
-	// Count routes
 	if err := db.WithContext(ctx).Model(&models.ShipmentRoute{}).Where("shipment_id = ?", shipmentID).Count(&summary.RoutesCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count routes: %w", err)
 	}
 
-	// Count vessels
 	if err := db.WithContext(ctx).Model(&models.ShipmentVessel{}).Where("shipment_id = ?", shipmentID).Count(&summary.VesselsCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count vessels: %w", err)
 	}
 
-	// Count facilities
 	if err := db.WithContext(ctx).Model(&models.ShipmentFacility{}).Where("shipment_id = ?", shipmentID).Count(&summary.FacilitiesCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count facilities: %w", err)
 	}
 
-	// Count containers
 	if err := db.WithContext(ctx).Model(&models.ShipmentContainer{}).Where("shipment_id = ?", shipmentID).Count(&summary.ContainersCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count containers: %w", err)
 	}
 
-	// Count container events (via containers)
 	var containerIDs []uuid.UUID
 	if err := db.WithContext(ctx).Model(&models.ShipmentContainer{}).Where("shipment_id = ?", shipmentID).Pluck("container_id", &containerIDs).Error; err != nil {
 		return nil, fmt.Errorf("failed to get container IDs: %w", err)
@@ -1307,17 +1282,14 @@ func (r *shipmentRepository) GetShipmentDataSummary(ctx context.Context, shipmen
 		}
 	}
 
-	// Count route segments
 	if err := db.WithContext(ctx).Model(&models.RouteSegment{}).Where("shipment_id = ?", shipmentID).Count(&summary.RouteSegmentsCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count route segments: %w", err)
 	}
 
-	// Count coordinates
 	if err := db.WithContext(ctx).Model(&models.Coordinate{}).Where("shipment_id = ?", shipmentID).Count(&summary.CoordinatesCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count coordinates: %w", err)
 	}
 
-	// Count AIS records
 	if err := db.WithContext(ctx).Model(&models.Ais{}).Where("shipment_id = ?", shipmentID).Count(&summary.AisCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count AIS records: %w", err)
 	}
@@ -1379,10 +1351,8 @@ func (r *shipmentRepository) UpdateShipmentInfo(ctx context.Context, userID, shi
 func (r *shipmentRepository) UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error {
 	db := r.db.DB.WithContext(ctx)
 
-	// Validate and prepare the updates map
-	validUpdates := make(map[string]interface{})
+	validUpdates := make(map[string]any)
 
-	// Define field mappings from JSON to database columns
 	fieldMappings := map[string]string{
 		"consignee":        "consignee",
 		"recipient":        "recipient",
@@ -1402,17 +1372,15 @@ func (r *shipmentRepository) UpdateShipmentInfoPartial(ctx context.Context, user
 		"paymentReceived":  "payment_received",
 	}
 
-	// Process each update
 	for jsonField, value := range updates {
 		if dbField, exists := fieldMappings[jsonField]; exists {
 			validUpdates[dbField] = value
 		}
 	}
 
-	// Always update the timestamp
 	validUpdates["updated_at"] = time.Now()
 
-	if len(validUpdates) == 1 { // Only timestamp
+	if len(validUpdates) == 1 {
 		return fmt.Errorf("no valid fields to update")
 	}
 
@@ -1471,12 +1439,10 @@ func (r *shipmentRepository) BulkDeleteUserShipments(ctx context.Context, userID
 	return nil
 }
 
-// ShipmentForRefresh represents a shipment for background processing
 type ShipmentForRefresh struct {
 	models.Shipment
 }
 
-// GetAllShipmentsForRefresh gets all shipments that need refreshing for background processing
 func (r *shipmentRepository) GetAllShipmentsForRefresh(ctx context.Context, skipRecentlyUpdated time.Duration) ([]ShipmentForRefresh, error) {
 	db := r.getDBFromContext(ctx)
 
@@ -1485,7 +1451,6 @@ func (r *shipmentRepository) GetAllShipmentsForRefresh(ctx context.Context, skip
 	query := db.Table("shipments").
 		Where("shipping_status != ?", "DELIVERED")
 
-	// Skip recently updated shipments if configured
 	if skipRecentlyUpdated > 0 {
 		cutoffTime := time.Now().Add(-skipRecentlyUpdated)
 		query = query.Where("updated_at < ?", cutoffTime)
@@ -1498,7 +1463,34 @@ func (r *shipmentRepository) GetAllShipmentsForRefresh(ctx context.Context, skip
 	return results, nil
 }
 
-func getShipmentDate(containers []dto.ShipmentContainerResponse) (*time.Time, error) {
+func (r *shipmentRepository) GetShipmentsWithDetailsForGrid(ctx context.Context, userID uuid.UUID) ([]models.Shipment, error) {
+	var shipments []models.Shipment
+
+	err := r.db.DB.WithContext(ctx).
+		Joins("JOIN user_shipments us ON us.shipment_id = shipments.id").
+		Where("us.user_id = ?", userID).
+		Preload("Locations").
+		Preload("Routes.Location").
+		Preload("Vessels").
+		Preload("Facilities").
+		Preload("Containers").
+		Preload("Containers.Events.Location").
+		Preload("Containers.Events.Facility").
+		Preload("Containers.Events.Vessel").
+		Preload("RouteSegments").
+		Preload("RouteSegments.Points").
+		Preload("Coordinates").
+		Preload("Ais").
+		Find(&shipments).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch shipments for grid: %w", err)
+	}
+
+	return shipments, nil
+}
+
+func (r *shipmentRepository) GetShipmentDate(containers []dto.ShipmentContainerResponse) (*time.Time, error) {
 	var minDate *time.Time
 
 	for _, container := range containers {
@@ -1521,4 +1513,136 @@ func getShipmentDate(containers []dto.ShipmentContainerResponse) (*time.Time, er
 	}
 
 	return nil, fmt.Errorf("no pickup (PICK) event found in shipment data")
+}
+
+func (r *shipmentRepository) MapShipmentToDTO(ctx context.Context, shipment models.Shipment) dto.ShipmentDetailsResponse {
+
+	containerdtos := make([]dto.ShipmentContainerResponse, len(shipment.Containers))
+	for j, cont := range shipment.Containers {
+		eventDtos := make([]dto.ShipmentContainerEventResponse, len(cont.Events))
+		for k, evt := range cont.Events {
+			mappedEvent, _ := r.ConvertContainerEventToDTO(ctx, evt)
+			eventDtos[k] = mappedEvent
+		}
+		containerdtos[j] = dto.ShipmentContainerResponse{
+			Number:   cont.Number,
+			IsoCode:  cont.IsoCode,
+			SizeType: cont.SizeType,
+			Status:   cont.Status,
+			Events:   eventDtos,
+		}
+	}
+
+	routeSegDTOs := make([]dto.ShipmentRouteSegmentResponse, len(shipment.RouteSegments))
+	for k, seg := range shipment.RouteSegments {
+		pathDTOs := make([]dto.ShipmentRouteSegmentPointResponse, len(seg.Points))
+		for m, pt := range seg.Points {
+			pathDTOs[m] = dto.ShipmentRouteSegmentPointResponse{
+				Latitude:   pt.Latitude,
+				Longitude:  pt.Longitude,
+				PointOrder: pt.PointOrder,
+			}
+		}
+
+		routeSegDTOs[k] = dto.ShipmentRouteSegmentResponse{
+			RouteType:    seg.RouteType,
+			SegmentOrder: seg.SegmentOrder,
+			Path:         pathDTOs,
+		}
+	}
+
+	var coordDTO dto.ShipmentCoordinatesResponse
+	if len(shipment.Coordinates) > 0 {
+		latestCoord := shipment.Coordinates[0]
+		for _, c := range shipment.Coordinates {
+			if c.UpdatedAt.After(latestCoord.UpdatedAt) {
+				latestCoord = c
+			}
+		}
+		coordDTO = dto.ShipmentCoordinatesResponse{
+			Latitude:  latestCoord.Latitude,
+			Longitude: latestCoord.Longitude,
+			UpdatedAt: latestCoord.UpdatedAt,
+		}
+	}
+
+	var aisDTO dto.ShipmentAisResponse
+	if shipment.Ais != nil {
+		aisDTO = dto.ShipmentAisResponse{
+			Status:                   shipment.Ais.Status,
+			LastEventDescription:     shipment.Ais.LastEventDescription,
+			LastEventDate:            shipment.Ais.LastEventDate,
+			LastEventVoyage:          shipment.Ais.LastEventVoyage,
+			DischargePortName:        shipment.Ais.DischargePortName,
+			DischargePortCountryCode: shipment.Ais.DischargePortCountryCode,
+			DischargePortCode:        shipment.Ais.DischargePortCode,
+			DischargePortDate:        shipment.Ais.DischargePortDate,
+			DischargePortDateLabel:   shipment.Ais.DischargePortDateLabel,
+			DeparturePortName:        shipment.Ais.DeparturePortName,
+			DeparturePortCountryCode: shipment.Ais.DeparturePortCountryCode,
+			DeparturePortCode:        shipment.Ais.DeparturePortCode,
+			DeparturePortDate:        shipment.Ais.DeparturePortDate,
+			DeparturePortDateLabel:   shipment.Ais.DeparturePortDateLabel,
+			ArrivalPortName:          shipment.Ais.ArrivalPortName,
+			ArrivalPortCountryCode:   shipment.Ais.ArrivalPortCountryCode,
+			ArrivalPortCode:          shipment.Ais.ArrivalPortCode,
+			ArrivalPortDate:          shipment.Ais.ArrivalPortDate,
+			ArrivalPortDateLabel:     shipment.Ais.ArrivalPortDateLabel,
+			LastVesselPositionLat:    shipment.Ais.LastVesselPositionLat,
+			LastVesselPositionLng:    shipment.Ais.LastVesselPositionLng,
+			LastVesselPositionUpdate: shipment.Ais.LastVesselPositionUpdate,
+			UpdatedAt:                shipment.Ais.UpdatedAt,
+		}
+		if shipment.Ais.Vessel != nil {
+			v := r.ConvertVesselToDTO(*shipment.Ais.Vessel)
+			aisDTO.Vessel = &v
+		}
+	}
+
+	response := dto.ShipmentDetailsResponse{
+		ID:             shipment.ID,
+		ShipmentNumber: shipment.ShipmentNumber,
+		ShipmentType:   shipment.ShipmentType,
+		SealineCode:    shipment.SealineCode,
+		SealineName:    shipment.SealineName,
+		ShippingStatus: shipment.ShippingStatus,
+		CreatedAt:      shipment.CreatedAt,
+		UpdatedAt:      shipment.UpdatedAt,
+
+		Consignee:        shipment.Consignee,
+		Recipient:        shipment.Recipient,
+		AssignedTo:       shipment.AssignedTo,
+		PlaceOfLoading:   shipment.PlaceOfLoading,
+		PlaceOfDelivery:  shipment.PlaceOfDelivery,
+		FinalDestination: shipment.FinalDestination,
+		ContainerType:    shipment.ContainerType,
+		Shipper:          shipment.Shipper,
+		InvoiceAmount:    shipment.InvoiceAmount,
+		Cost:             shipment.Cost,
+		Customs:          shipment.Customs,
+		MBL:              shipment.MBL,
+		Notes:            shipment.Notes,
+
+		CustomsProcessed: shipment.CustomsProcessed,
+		Invoiced:         shipment.Invoiced,
+		PaymentReceived:  shipment.PaymentReceived,
+
+		Locations:  r.ConvertLocationsToDTO(shipment.Locations),
+		Route:      r.ConvertRouteToDTO(shipment.Routes),
+		Vessels:    r.ConvertVesselsToDTO(shipment.Vessels),
+		Facilities: r.ConvertFacilitiesToDTO(shipment.Facilities),
+		Containers: containerdtos,
+
+		RouteData: dto.ShipmentRouteDataResponse{
+			RouteSegments: routeSegDTOs,
+			Coordinates:   coordDTO,
+			Ais:           aisDTO,
+		},
+	}
+
+	if date, err := r.GetShipmentDate(containerdtos); err == nil {
+		response.ShipmentDate = date
+	}
+
+	return response
 }

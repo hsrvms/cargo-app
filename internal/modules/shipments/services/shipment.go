@@ -45,13 +45,11 @@ func (s *shipmentService) AddShipment(
 		return nil, err
 	}
 	if exists {
-		// For existing shipments, we need to update the shipment info and add user relationship
 		existingShipment, err := s.repo.GetShipmentByNumber(ctx, req.ShipmentNumber)
 		if err != nil {
 			return nil, err
 		}
 
-		// Update shipment with new fields if provided
 		if req.Consignee != "" || req.Recipient != "" || req.AssignedTo != "" ||
 			req.PlaceOfLoading != "" || req.PlaceOfDelivery != "" || req.FinalDestination != "" ||
 			req.ContainerType != "" || req.Shipper != "" || req.InvoiceAmount != "" ||
@@ -118,7 +116,6 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 		Warnings:       apiResponse.Metadata.Warnings,
 	}
 
-	// Set the shipment info fields
 	shipmentModel.Consignee = req.Consignee
 	shipmentModel.Recipient = req.Recipient
 	shipmentModel.AssignedTo = req.AssignedTo
@@ -259,7 +256,6 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 			location, err := s.repo.FindLocationByLocode(ctx, ce.Location.Locode)
 			if err != nil {
 				if err.Error() == "location not found" {
-					// Create location if it doesn't exist
 					newLocation := models.Location{
 						Name:        ce.Location.Name,
 						State:       ce.Location.State,
@@ -284,7 +280,6 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 				facility, err = s.repo.FindFacilityByLocode(ctx, ce.Facility.Locode)
 				if err != nil {
 					if err.Error() == "location not found" {
-						// Create facility if it doesn't exist
 						newFacility := models.Facility{
 							Name:        ce.Facility.Name,
 							CountryCode: ce.Facility.CountryCode,
@@ -392,7 +387,6 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, fmt.Errorf("failed to find AIS vessel: %w", err)
 			}
-			// If vessel not found, skip AIS data creation
 			log.Printf("AIS vessel not found (IMO: %d, MMSI: %d), skipping AIS data creation", aisData.Vessel.Imo, aisData.Vessel.Mmsi)
 		} else {
 			ais := &models.Ais{
@@ -443,39 +437,18 @@ func (s *shipmentService) createNewShipmentFromSafeCubeAPI(
 }
 
 func (s *shipmentService) GetShipmentsForGrid(ctx context.Context, userID uuid.UUID) (*dto.GridDataResponse, error) {
-	shipments, err := s.repo.GetShipmentsForGrid(ctx, userID)
+	shipments, err := s.repo.GetShipmentsWithDetailsForGrid(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch shipments for grid: %w", err)
 	}
 
-	detailedShipments := make([]dto.ShipmentDetailsResponse, len(shipments))
-	for i, shipment := range shipments {
-		shipmentDetails, err := s.repo.GetShipmentDetails(ctx, userID, shipment.ID)
-		if err != nil {
-			detailedShipments[i] = dto.ShipmentDetailsResponse{
-				ID:             shipment.ID,
-				ShipmentNumber: shipment.ShipmentNumber,
-				ShipmentType:   shipment.ShipmentType,
-				SealineCode:    shipment.SealineCode,
-				SealineName:    shipment.SealineName,
-				ShippingStatus: shipment.ShippingStatus,
-				CreatedAt:      shipment.CreatedAt,
-				UpdatedAt:      shipment.UpdatedAt,
-				Locations:      []dto.ShipmentLocationResponse{},
-				Route:          dto.ShipmentRouteResponse{},
-				Vessels:        []dto.ShipmentVesselResponse{},
-				Facilities:     []dto.ShipmentFacilityResponse{},
-				Containers:     []dto.ShipmentContainerResponse{},
-				RouteData:      dto.ShipmentRouteDataResponse{},
-			}
-			continue
-		}
-		detailedShipments[i] = *shipmentDetails
+	rows := make([]dto.ShipmentDetailsResponse, len(shipments))
+
+	for i, model := range shipments {
+		rows[i] = s.repo.MapShipmentToDTO(ctx, model)
 	}
 
-	return &dto.GridDataResponse{
-		Rows: detailedShipments,
-	}, nil
+	return &dto.GridDataResponse{Rows: rows}, nil
 }
 
 func (s *shipmentService) GetShipmentByNumber(
@@ -511,7 +484,6 @@ func (s *shipmentService) GetShipmentByID(
 	return shipment, nil
 }
 
-// validateShipmentForSync validates that a shipment exists and can be synced
 func (s *shipmentService) validateShipmentForSync(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error) {
 	if shipmentID == uuid.Nil {
 		return nil, fmt.Errorf("invalid shipment ID: cannot be nil")
@@ -525,7 +497,6 @@ func (s *shipmentService) validateShipmentForSync(ctx context.Context, userID, s
 		return nil, fmt.Errorf("failed to retrieve shipment: %w", err)
 	}
 
-	// Validate that shipment has required fields for API sync
 	if shipment.ShipmentNumber == "" {
 		return nil, fmt.Errorf("shipment %s has no shipment number", shipmentID)
 	}
@@ -539,9 +510,7 @@ func (s *shipmentService) validateShipmentForSync(ctx context.Context, userID, s
 	return shipment, nil
 }
 
-// recreateShipmentRelatedData recreates all shipment related data from API response
 func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipment *models.Shipment, apiResponse *shipmentsDto.SafeCubeAPIShipmentResponse) (*types.SyncStats, error) {
-	// Validate API response
 	if apiResponse == nil {
 		return nil, fmt.Errorf("API response is nil")
 	}
@@ -551,7 +520,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 
 	stats := &types.SyncStats{}
 	log.Printf("Creating %d locations for shipment %s", len(apiResponse.Locations), shipment.ShipmentNumber)
-	// Create locations
 	for _, loc := range apiResponse.Locations {
 		location := models.Location{
 			Name:        loc.Name,
@@ -571,7 +539,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	}
 
 	log.Printf("Creating route points for shipment %s", shipment.ShipmentNumber)
-	// Create routes
 	routes := map[string]*dto.SafeCubeRoutePoint{
 		"PREPOL":  &apiResponse.Route.Prepol,
 		"POL":     &apiResponse.Route.Pol,
@@ -622,7 +589,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	}
 
 	log.Printf("Creating %d vessels for shipment %s", len(apiResponse.Vessels), shipment.ShipmentNumber)
-	// Create vessels
 	for _, v := range apiResponse.Vessels {
 		vessel := models.Vessel{
 			Name:     v.Name,
@@ -639,7 +605,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	}
 
 	log.Printf("Creating %d facilities for shipment %s", len(apiResponse.Facilities), shipment.ShipmentNumber)
-	// Create facilities
 	for _, f := range apiResponse.Facilities {
 		facility := models.Facility{
 			Name:        f.Name,
@@ -658,7 +623,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	}
 
 	log.Printf("Creating %d containers for shipment %s", len(apiResponse.Containers), shipment.ShipmentNumber)
-	// Create containers and their events
 	for _, c := range apiResponse.Containers {
 		container := models.Container{
 			Number:   c.Number,
@@ -672,12 +636,10 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 		}
 		stats.ContainersCreated++
 
-		// Create container events
 		for _, ce := range c.Events {
 			location, err := s.repo.FindLocationByLocode(ctx, ce.Location.Locode)
 			if err != nil {
 				if err.Error() == "location not found" {
-					// Create location if it doesn't exist
 					newLocation := models.Location{
 						Name:        ce.Location.Name,
 						State:       ce.Location.State,
@@ -702,7 +664,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 				facility, err = s.repo.FindFacilityByLocode(ctx, ce.Facility.Locode)
 				if err != nil {
 					if err.Error() == "location not found" {
-						// Create facility if it doesn't exist
 						newFacility := models.Facility{
 							Name:        ce.Facility.Name,
 							CountryCode: ce.Facility.CountryCode,
@@ -764,7 +725,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	}
 
 	log.Printf("Creating %d route segments for shipment %s", len(apiResponse.RouteData.RouteSegments), shipment.ShipmentNumber)
-	// Create route segments
 	for segIdx, rs := range apiResponse.RouteData.RouteSegments {
 		segment := models.RouteSegment{
 			ShipmentID:   shipment.ID,
@@ -777,7 +737,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 		}
 		stats.RouteSegmentsCreated++
 
-		// Create segment points
 		for pointIdx, point := range rs.Path {
 			segmentPoint := models.RouteSegmentPoint{
 				SegmentID:  createdSegment.ID,
@@ -793,7 +752,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	}
 
 	log.Printf("Creating coordinates for shipment %s", shipment.ShipmentNumber)
-	// Create coordinates
 	coordinate := &models.Coordinate{
 		ShipmentID: shipment.ID,
 		Latitude:   apiResponse.RouteData.Coordinates.Lat,
@@ -807,7 +765,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 	stats.CoordinatesCreated++
 
 	log.Printf("Creating AIS data for shipment %s", shipment.ShipmentNumber)
-	// Create AIS data
 	if apiResponse.RouteData.Ais.Data != nil {
 		aisData := apiResponse.RouteData.Ais.Data
 		aisVessel, err := s.repo.FindVesselByIMOAndMMSI(ctx, aisData.Vessel.Imo, aisData.Vessel.Mmsi)
@@ -815,7 +772,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, fmt.Errorf("failed to find AIS vessel: %w", err)
 			}
-			// If vessel not found, skip AIS data creation
 			log.Printf("AIS vessel not found (IMO: %d, MMSI: %d), skipping AIS data creation", aisData.Vessel.Imo, aisData.Vessel.Mmsi)
 		} else {
 
@@ -867,7 +823,6 @@ func (s *shipmentService) recreateShipmentRelatedData(ctx context.Context, shipm
 }
 
 func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID uuid.UUID) (*models.Shipment, error) {
-	// Validate shipment before starting sync
 	existingShipment, err := s.validateShipmentForSync(ctx, userID, shipmentID)
 	if err != nil {
 		return nil, err
@@ -875,7 +830,6 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 
 	log.Printf("Starting sync for shipment %s (ID: %s)", existingShipment.ShipmentNumber, shipmentID)
 
-	// Get data summary before sync
 	beforeSummary, err := s.repo.GetShipmentDataSummary(ctx, shipmentID)
 	if err != nil {
 		log.Printf("Warning: Failed to get before-sync summary for shipment %s: %v", shipmentID, err)
@@ -885,7 +839,6 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 			beforeSummary.FacilitiesCount, beforeSummary.ContainersCount, beforeSummary.ContainerEventsCount,
 			beforeSummary.RouteSegmentsCount, beforeSummary.CoordinatesCount, beforeSummary.AisCount)
 	}
-	// Get fresh data from SafeCube API
 	apiResponse, err := s.safeCubeAPIService.GetShipmentDetails(
 		ctx,
 		existingShipment.ShipmentNumber,
@@ -898,7 +851,6 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 
 	log.Printf("Starting sync for shipment %s (ID: %s)", existingShipment.ShipmentNumber, shipmentID)
 
-	// Start a transaction to ensure data consistency
 	tx := s.repo.GetDB().DB.Begin()
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
@@ -911,11 +863,9 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 		}
 	}()
 
-	// Create a context with the transaction
 	txCtx := context.WithValue(ctx, "tx", tx)
 
 	log.Printf("Cleaning up existing data for shipment %s (ID: %s)", existingShipment.ShipmentNumber, shipmentID)
-	// Delete all existing related data
 	err = s.repo.DeleteAllShipmentRelatedData(txCtx, shipmentID)
 	if err != nil {
 		log.Printf("Failed to delete existing data for shipment %s (ID: %s): %v", existingShipment.ShipmentNumber, shipmentID, err)
@@ -924,7 +874,6 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 	}
 	log.Printf("Successfully cleaned up existing data for shipment %s", existingShipment.ShipmentNumber)
 
-	// Update shipment metadata
 	shipmentModel := &models.Shipment{
 		ShipmentNumber: apiResponse.Metadata.ShipmentNumber,
 		ShipmentType:   apiResponse.Metadata.ShipmentType,
@@ -935,7 +884,6 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 	}
 
 	log.Printf("Updating shipment metadata for %s", existingShipment.ShipmentNumber)
-	// Use transaction context for update
 	err = tx.Model(&models.Shipment{}).Where("id = ?", shipmentID).Updates(shipmentModel).Error
 	if err != nil {
 		log.Printf("Failed to update shipment metadata for %s: %v", existingShipment.ShipmentNumber, err)
@@ -943,7 +891,6 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 		return nil, fmt.Errorf("failed to update shipment: %w", err)
 	}
 
-	// Get the updated shipment
 	var shipment models.Shipment
 	err = tx.First(&shipment, "id = ?", shipmentID).Error
 	if err != nil {
@@ -953,7 +900,6 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 	}
 
 	log.Printf("Recreating related data for shipment %s", shipment.ShipmentNumber)
-	// Recreate all related data from fresh API response
 	stats, err := s.recreateShipmentRelatedData(txCtx, &shipment, apiResponse)
 	if err != nil {
 		log.Printf("Failed to recreate related data for shipment %s: %v", shipment.ShipmentNumber, err)
@@ -961,13 +907,11 @@ func (s *shipmentService) SyncShipment(ctx context.Context, userID, shipmentID u
 		return nil, fmt.Errorf("failed to recreate shipment data: %w", err)
 	}
 
-	// Commit the transaction
 	if err := tx.Commit().Error; err != nil {
 		log.Printf("Failed to commit transaction for shipment %s: %v", shipment.ShipmentNumber, err)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Get data summary after sync
 	afterSummary, err := s.repo.GetShipmentDataSummary(ctx, shipmentID)
 	if err != nil {
 		log.Printf("Warning: Failed to get after-sync summary for shipment %s: %v", shipmentID, err)
@@ -1011,7 +955,6 @@ func (s *shipmentService) RefreshShipment(ctx context.Context, userID, shipmentI
 	return shipment, nil
 }
 
-// SystemRefreshShipment refreshes a shipment without user authentication (for background jobs)
 func (s *shipmentService) SystemRefreshShipment(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error) {
 	log.Printf("System refresh requested for shipment %s", shipmentID)
 
@@ -1025,16 +968,13 @@ func (s *shipmentService) SystemRefreshShipment(ctx context.Context, shipmentID 
 	return shipment, nil
 }
 
-// SystemSyncShipment syncs a shipment without user ownership validation (for background jobs)
 func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error) {
-	// Get shipment to verify it exists and check its status
 	var existingShipment models.Shipment
 	err := s.repo.GetDB().DB.WithContext(ctx).First(&existingShipment, "id = ?", shipmentID).Error
 	if err != nil {
 		return nil, fmt.Errorf("shipment not found: %w", err)
 	}
 
-	// Skip delivered shipments - no need to refresh completed shipments
 	if existingShipment.ShippingStatus == "delivered" {
 		log.Printf("Skipping delivered shipment %s", existingShipment.ShipmentNumber)
 		return &existingShipment, nil
@@ -1042,7 +982,6 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 
 	log.Printf("Starting system sync for shipment %s (ID: %s)", existingShipment.ShipmentNumber, shipmentID)
 
-	// Get data summary before sync
 	beforeSummary, err := s.repo.GetShipmentDataSummary(ctx, shipmentID)
 	if err != nil {
 		log.Printf("Warning: Failed to get before-sync summary for shipment %s: %v", shipmentID, err)
@@ -1053,7 +992,6 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 			beforeSummary.RouteSegmentsCount, beforeSummary.CoordinatesCount, beforeSummary.AisCount)
 	}
 
-	// Get fresh data from SafeCube API
 	apiResponse, err := s.safeCubeAPIService.GetShipmentDetails(
 		ctx,
 		existingShipment.ShipmentNumber,
@@ -1064,7 +1002,6 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 		return nil, err
 	}
 
-	// Start a transaction to ensure data consistency
 	tx := s.repo.GetDB().DB.Begin()
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
@@ -1077,11 +1014,9 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 		}
 	}()
 
-	// Create a context with the transaction
 	txCtx := context.WithValue(ctx, "tx", tx)
 
 	log.Printf("Cleaning up existing data for shipment %s", existingShipment.ShipmentNumber)
-	// Delete all existing related data
 	err = s.repo.DeleteAllShipmentRelatedData(txCtx, shipmentID)
 	if err != nil {
 		log.Printf("Failed to delete existing data for shipment %s: %v", existingShipment.ShipmentNumber, err)
@@ -1089,7 +1024,6 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 		return nil, fmt.Errorf("failed to delete existing shipment data: %w", err)
 	}
 
-	// Update shipment metadata
 	shipmentModel := &models.Shipment{
 		ShipmentNumber: apiResponse.Metadata.ShipmentNumber,
 		ShipmentType:   apiResponse.Metadata.ShipmentType,
@@ -1100,7 +1034,6 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 	}
 
 	log.Printf("Updating shipment metadata for %s", existingShipment.ShipmentNumber)
-	// Use transaction context for update
 	err = tx.Model(&models.Shipment{}).Where("id = ?", shipmentID).Updates(shipmentModel).Error
 	if err != nil {
 		log.Printf("Failed to update shipment metadata for %s: %v", existingShipment.ShipmentNumber, err)
@@ -1108,7 +1041,6 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 		return nil, fmt.Errorf("failed to update shipment: %w", err)
 	}
 
-	// Get the updated shipment
 	var shipment models.Shipment
 	err = tx.First(&shipment, "id = ?", shipmentID).Error
 	if err != nil {
@@ -1118,7 +1050,6 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 	}
 
 	log.Printf("Recreating related data for shipment %s", shipment.ShipmentNumber)
-	// Recreate all related data from fresh API response
 	stats, err := s.recreateShipmentRelatedData(txCtx, &shipment, apiResponse)
 	if err != nil {
 		log.Printf("Failed to recreate related data for shipment %s: %v", shipment.ShipmentNumber, err)
@@ -1126,13 +1057,11 @@ func (s *shipmentService) SystemSyncShipment(ctx context.Context, shipmentID uui
 		return nil, fmt.Errorf("failed to recreate shipment data: %w", err)
 	}
 
-	// Commit the transaction
 	if err := tx.Commit().Error; err != nil {
 		log.Printf("Failed to commit transaction for shipment %s: %v", shipment.ShipmentNumber, err)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Get data summary after sync
 	afterSummary, err := s.repo.GetShipmentDataSummary(ctx, shipmentID)
 	if err != nil {
 		log.Printf("Warning: Failed to get after-sync summary for shipment %s: %v", shipmentID, err)
