@@ -64,7 +64,7 @@ const columnDefs = [
         width: 160,
         filter: "agDateColumnFilter",
         valueGetter: (params) => {
-            const dateVal = params.data.containers[0]?.events[0]?.date;
+            const dateVal = params.data.shipmentDate
             return dateVal ? new Date(dateVal) : null;
         },
         cellRenderer: (params) => {
@@ -595,7 +595,6 @@ export function loadShipments(gridApi) {
     })
         .then((response) => response.json())
         .then((data) => {
-            console.log("GridData:", data);
             gridApi.setGridOption("rowData", data.rows);
             setTimeout(() => {
                 const visibleShipments = getVisibleShipments(gridApi, { debug: false });

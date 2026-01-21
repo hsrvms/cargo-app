@@ -7,14 +7,15 @@ import (
 )
 
 type ShipmentDetailsResponse struct {
-	ID             uuid.UUID `json:"id"`
-	ShipmentType   string    `json:"shipmentType"`
-	ShipmentNumber string    `json:"shipmentNumber"`
-	SealineCode    string    `json:"sealineCode"`
-	SealineName    string    `json:"sealineName"`
-	ShippingStatus string    `json:"shippingStatus"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
+	ID             uuid.UUID  `json:"id"`
+	ShipmentType   string     `json:"shipmentType"`
+	ShipmentNumber string     `json:"shipmentNumber"`
+	ShipmentDate   *time.Time `json:"shipmentDate"`
+	SealineCode    string     `json:"sealineCode"`
+	SealineName    string     `json:"sealineName"`
+	ShippingStatus string     `json:"shippingStatus"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
 	// Shipment Information Fields
 	Consignee        string `json:"consignee"`
 	Recipient        string `json:"recipient"`

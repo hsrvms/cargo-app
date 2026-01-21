@@ -643,7 +643,7 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 		return nil, err
 	}
 
-	return &dto.ShipmentDetailsResponse{
+	response := &dto.ShipmentDetailsResponse{
 		ID:               shipment.ID,
 		ShipmentType:     shipment.ShipmentType,
 		ShipmentNumber:   shipment.ShipmentNumber,
@@ -674,7 +674,14 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 		Facilities:       facilities,
 		Containers:       containers,
 		RouteData:        routeData,
-	}, nil
+	}
+
+	shipmentDate, err := getShipmentDate(containers)
+	if err == nil {
+		response.ShipmentDate = shipmentDate
+	}
+
+	return response, nil
 }
 
 // getShipmentLocations fetches and converts shipment locations
@@ -1489,4 +1496,29 @@ func (r *shipmentRepository) GetAllShipmentsForRefresh(ctx context.Context, skip
 	}
 
 	return results, nil
+}
+
+func getShipmentDate(containers []dto.ShipmentContainerResponse) (*time.Time, error) {
+	var minDate *time.Time
+
+	for _, container := range containers {
+		for _, event := range container.Events {
+			if event.Date.IsZero() {
+				continue
+			}
+
+			currentDate := event.Date
+
+			if minDate == nil || currentDate.Before(*minDate) {
+				t := currentDate
+				minDate = &t
+			}
+		}
+	}
+
+	if minDate != nil {
+		return minDate, nil
+	}
+
+	return nil, fmt.Errorf("no pickup (PICK) event found in shipment data")
 }

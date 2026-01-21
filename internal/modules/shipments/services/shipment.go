@@ -450,11 +450,8 @@ func (s *shipmentService) GetShipmentsForGrid(ctx context.Context, userID uuid.U
 
 	detailedShipments := make([]dto.ShipmentDetailsResponse, len(shipments))
 	for i, shipment := range shipments {
-		// Get detailed shipment information for each shipment
 		shipmentDetails, err := s.repo.GetShipmentDetails(ctx, userID, shipment.ID)
 		if err != nil {
-			// Log the error but continue with other shipments
-			// Fall back to basic shipment info if details can't be retrieved
 			detailedShipments[i] = dto.ShipmentDetailsResponse{
 				ID:             shipment.ID,
 				ShipmentNumber: shipment.ShipmentNumber,
