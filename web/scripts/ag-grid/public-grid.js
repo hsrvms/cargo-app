@@ -193,6 +193,10 @@ export function initPublicGrid(viewId, gridDivId = "#public-grid") {
     publicGridApi = agGrid.createGrid(gridDiv, gridOptions);
 
     loadPublicData(viewId);
+
+    window.publicGridApi = publicGridApi;
+
+    return publicGridApi;
 }
 
 function loadPublicData(viewId) {

@@ -1,22 +1,33 @@
 import { initPublicGrid } from "./ag-grid/public-grid.js";
 import { initModalFunctions } from "./ag-grid/modal-functions.js";
+import { initEnhancedMap } from "./map/handle-map-enhanced.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-    initModalFunctions();
+function publicMain() {
+    document.addEventListener("DOMContentLoaded", () => {
+        initModalFunctions();
 
-    const gridContainer = document.querySelector("#public-grid");
+        const gridContainer = document.querySelector("#public-grid");
 
-    if (!gridContainer) {
-        console.error("Public Grid container #public-grid not found!");
-        return;
-    }
+        if (!gridContainer) {
+            console.error("Public Grid container #public-grid not found!");
+            return;
+        }
 
-    const viewID = gridContainer.dataset.viewId;
+        const viewID = gridContainer.dataset.viewId;
 
-    if (viewID) {
-        console.log("Initializing Public Grid for View ID:", viewID);
-        initPublicGrid(viewID);
-    } else {
-        console.error("No view ID found in data-view-id attribute");
-    }
-});
+        if (viewID) {
+            console.log("Initializing Public Grid for View ID:", viewID);
+            const publicGridApi = initPublicGrid(viewID);
+            const map = initEnhancedMap(publicGridApi, {
+                mapContainerId: "miniMap",
+                standalone: false,
+            });
+
+            window.currentEnhancedMap = map;
+        } else {
+            console.error("No view ID found in data-view-id attribute");
+        }
+    });
+}
+
+publicMain();
