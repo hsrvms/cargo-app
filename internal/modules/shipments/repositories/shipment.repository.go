@@ -51,6 +51,7 @@ type ShipmentRepository interface {
 	CreateAis(ctx context.Context, ais *models.Ais) (*models.Ais, error)
 	GetShipmentAisData(ctx context.Context, shipmentID uuid.UUID) (*dto.ShipmentAisResponse, error)
 
+	GetShipmentWithRelations(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error)
 	GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error)
 	UpdateShipmentInfo(ctx context.Context, userID, shipmentID uuid.UUID, req *dto.UpdateShipmentInfoRequest) error
 	UpdateShipmentInfoPartial(ctx context.Context, userID, shipmentID uuid.UUID, updates map[string]interface{}) error
@@ -594,6 +595,32 @@ func (r *shipmentRepository) GetShipmentAisData(ctx context.Context, shipmentID 
 	return &aisResponse, nil
 }
 
+func (r *shipmentRepository) GetShipmentWithRelations(ctx context.Context, shipmentID uuid.UUID) (*models.Shipment, error) {
+	db := r.getDBFromContext(ctx)
+	var shipment models.Shipment
+
+	err := db.WithContext(ctx).
+		Preload("Locations").
+		Preload("Routes.Location").
+		Preload("Vessels").
+		Preload("Facilities").
+		Preload("Containers").
+		Preload("Containers.Events.Location").
+		Preload("Containers.Events.Facility").
+		Preload("Containers.Events.Vessel").
+		Preload("RouteSegments").
+		Preload("RouteSegments.Points").
+		Preload("Coordinates").
+		Preload("Ais").
+		First(&shipment, "id = ?", shipmentID).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &shipment, err
+}
+
 func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shipmentID uuid.UUID) (*dto.ShipmentDetailsResponse, error) {
 	shipment, err := r.GetShipmentByID(ctx, userID, shipmentID)
 	if err != nil {
@@ -607,67 +634,73 @@ func (r *shipmentRepository) GetShipmentDetails(ctx context.Context, userID, shi
 		return nil, fmt.Errorf("failed to get user shipment info: %w", err)
 	}
 
-	locations, err := r.getShipmentLocations(ctx, shipmentID)
+	return r.buildShipmentResponse(ctx, shipment)
+}
+
+func (r *shipmentRepository) buildShipmentResponse(ctx context.Context, shipment *models.Shipment) (*dto.ShipmentDetailsResponse, error) {
+	locations, err := r.getShipmentLocations(ctx, shipment.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	route, err := r.getShipmentRoute(ctx, shipmentID)
+	route, err := r.getShipmentRoute(ctx, shipment.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	vessels, err := r.getShipmentVessels(ctx, shipmentID)
+	vessels, err := r.getShipmentVessels(ctx, shipment.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	facilities, err := r.getShipmentFacilities(ctx, shipmentID)
+	facilities, err := r.getShipmentFacilities(ctx, shipment.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	containers, err := r.getShipmentContainers(ctx, shipmentID)
+	containers, err := r.getShipmentContainers(ctx, shipment.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	routeData, err := r.getShipmentRouteData(ctx, shipmentID, shipment.ID)
+	routeData, err := r.getShipmentRouteData(ctx, shipment.ID, shipment.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	response := &dto.ShipmentDetailsResponse{
-		ID:               shipment.ID,
-		ShipmentType:     shipment.ShipmentType,
-		ShipmentNumber:   shipment.ShipmentNumber,
-		SealineCode:      shipment.SealineCode,
-		SealineName:      shipment.SealineName,
-		ShippingStatus:   shipment.ShippingStatus,
-		CreatedAt:        shipment.CreatedAt,
-		UpdatedAt:        shipment.UpdatedAt,
-		Consignee:        shipment.Consignee,
-		Recipient:        shipment.Recipient,
-		AssignedTo:       shipment.AssignedTo,
-		PlaceOfLoading:   shipment.PlaceOfLoading,
-		PlaceOfDelivery:  shipment.PlaceOfDelivery,
-		FinalDestination: shipment.FinalDestination,
-		ContainerType:    shipment.ContainerType,
-		Shipper:          shipment.Shipper,
-		InvoiceAmount:    shipment.InvoiceAmount,
-		Cost:             shipment.Cost,
-		Customs:          shipment.Customs,
-		MBL:              shipment.MBL,
-		Notes:            shipment.Notes,
+		ID:             shipment.ID,
+		ShipmentType:   shipment.ShipmentType,
+		ShipmentNumber: shipment.ShipmentNumber,
+		SealineCode:    shipment.SealineCode,
+		SealineName:    shipment.SealineName,
+		ShippingStatus: shipment.ShippingStatus,
+		CreatedAt:      shipment.CreatedAt,
+		UpdatedAt:      shipment.UpdatedAt,
+
+		Consignee:        &shipment.Consignee,
+		Recipient:        &shipment.Recipient,
+		AssignedTo:       &shipment.AssignedTo,
+		PlaceOfLoading:   &shipment.PlaceOfLoading,
+		PlaceOfDelivery:  &shipment.PlaceOfDelivery,
+		FinalDestination: &shipment.FinalDestination,
+		ContainerType:    &shipment.ContainerType,
+		Shipper:          &shipment.Shipper,
+		InvoiceAmount:    &shipment.InvoiceAmount,
+		Cost:             &shipment.Cost,
+		Customs:          &shipment.Customs,
+		MBL:              &shipment.MBL,
+		Notes:            &shipment.Notes,
 		CustomsProcessed: shipment.CustomsProcessed,
 		Invoiced:         shipment.Invoiced,
 		PaymentReceived:  shipment.PaymentReceived,
-		Locations:        locations,
-		Route:            route,
-		Vessels:          vessels,
-		Facilities:       facilities,
-		Containers:       containers,
-		RouteData:        routeData,
+
+		Locations:  locations,
+		Route:      route,
+		Vessels:    vessels,
+		Facilities: facilities,
+		Containers: containers,
+		RouteData:  routeData,
 	}
 
 	shipmentDate, err := r.GetShipmentDate(containers)
@@ -1609,19 +1642,19 @@ func (r *shipmentRepository) MapShipmentToDTO(ctx context.Context, shipment mode
 		CreatedAt:      shipment.CreatedAt,
 		UpdatedAt:      shipment.UpdatedAt,
 
-		Consignee:        shipment.Consignee,
-		Recipient:        shipment.Recipient,
-		AssignedTo:       shipment.AssignedTo,
-		PlaceOfLoading:   shipment.PlaceOfLoading,
-		PlaceOfDelivery:  shipment.PlaceOfDelivery,
-		FinalDestination: shipment.FinalDestination,
-		ContainerType:    shipment.ContainerType,
-		Shipper:          shipment.Shipper,
-		InvoiceAmount:    shipment.InvoiceAmount,
-		Cost:             shipment.Cost,
-		Customs:          shipment.Customs,
-		MBL:              shipment.MBL,
-		Notes:            shipment.Notes,
+		Consignee:        &shipment.Consignee,
+		Recipient:        &shipment.Recipient,
+		AssignedTo:       &shipment.AssignedTo,
+		PlaceOfLoading:   &shipment.PlaceOfLoading,
+		PlaceOfDelivery:  &shipment.PlaceOfDelivery,
+		FinalDestination: &shipment.FinalDestination,
+		ContainerType:    &shipment.ContainerType,
+		Shipper:          &shipment.Shipper,
+		InvoiceAmount:    &shipment.InvoiceAmount,
+		Cost:             &shipment.Cost,
+		Customs:          &shipment.Customs,
+		MBL:              &shipment.MBL,
+		Notes:            &shipment.Notes,
 
 		CustomsProcessed: shipment.CustomsProcessed,
 		Invoiced:         shipment.Invoiced,

@@ -668,7 +668,7 @@ function updateShipmentField(shipmentId, field, value) {
  * Generates a cell renderer that truncates text with CSS and shows a tooltip.
  * @param {string} placeholder - Text to show if value is null/empty (default: "N/A")
  */
-function createTruncatedRenderer(placeholder = '<span class="text-gray-400 italic">N/A</span>') {
+export function createTruncatedRenderer(placeholder = '<span class="text-gray-400 italic">N/A</span>') {
     return (params) => {
         if (!params.value) return placeholder;
 

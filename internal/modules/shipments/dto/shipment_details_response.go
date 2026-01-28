@@ -17,30 +17,31 @@ type ShipmentDetailsResponse struct {
 	CreatedAt      time.Time  `json:"createdAt"`
 	UpdatedAt      time.Time  `json:"updatedAt"`
 	// Shipment Information Fields
-	Consignee        string `json:"consignee"`
-	Recipient        string `json:"recipient"`
-	AssignedTo       string `json:"assignedTo"`
-	PlaceOfLoading   string `json:"placeOfLoading"`
-	PlaceOfDelivery  string `json:"placeOfDelivery"`
-	FinalDestination string `json:"finalDestination"`
-	ContainerType    string `json:"containerType"`
-	Shipper          string `json:"shipper"`
-	InvoiceAmount    string `json:"invoiceAmount"`
-	Cost             string `json:"cost"`
-	Customs          string `json:"customs"`
-	MBL              string `json:"mbl"`
-	Notes            string `json:"notes"`
+	Consignee        *string `json:"consignee"`
+	Recipient        *string `json:"recipient"`
+	AssignedTo       *string `json:"assignedTo"`
+	PlaceOfLoading   *string `json:"placeOfLoading"`
+	PlaceOfDelivery  *string `json:"placeOfDelivery"`
+	FinalDestination *string `json:"finalDestination"`
+	ContainerType    *string `json:"containerType"`
+	Shipper          *string `json:"shipper"`
+	InvoiceAmount    *string `json:"invoiceAmount"`
+	Cost             *string `json:"cost"`
+	Customs          *string `json:"customs"`
+	MBL              *string `json:"mbl"`
+	Notes            *string `json:"notes"`
 
 	// Boolean Fields
-	CustomsProcessed bool                        `json:"customsProcessed"`
-	Invoiced         bool                        `json:"invoiced"`
-	PaymentReceived  bool                        `json:"paymentReceived"`
-	Locations        []ShipmentLocationResponse  `json:"locations"`
-	Route            ShipmentRouteResponse       `json:"route"`
-	Vessels          []ShipmentVesselResponse    `json:"vessels"`
-	Facilities       []ShipmentFacilityResponse  `json:"facilities"`
-	Containers       []ShipmentContainerResponse `json:"containers"`
-	RouteData        ShipmentRouteDataResponse   `json:"routeData"`
+	CustomsProcessed bool `json:"customsProcessed"`
+	Invoiced         bool `json:"invoiced"`
+	PaymentReceived  bool `json:"paymentReceived"`
+
+	Locations  []ShipmentLocationResponse  `json:"locations"`
+	Route      ShipmentRouteResponse       `json:"route"`
+	Vessels    []ShipmentVesselResponse    `json:"vessels"`
+	Facilities []ShipmentFacilityResponse  `json:"facilities"`
+	Containers []ShipmentContainerResponse `json:"containers"`
+	RouteData  ShipmentRouteDataResponse   `json:"routeData"`
 }
 
 type ShipmentLocationResponse struct {

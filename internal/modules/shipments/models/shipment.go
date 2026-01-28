@@ -40,10 +40,11 @@ type Shipment struct {
 	PaymentReceived  bool `json:"payment_received" gorm:"type:boolean;default:false"`
 
 	// Many-to-Many
-	Locations  []Location  `json:"locations" gorm:"many2many:shipment_locations;"`
-	Containers []Container `json:"containers" gorm:"many2many:shipment_containers;"`
-	Vessels    []Vessel    `json:"vessels" gorm:"many2many:shipment_vessels;"`
-	Facilities []Facility  `json:"facilities" gorm:"many2many:shipment_facilities;"`
+	Locations   []Location   `json:"locations" gorm:"many2many:shipment_locations;"`
+	Containers  []Container  `json:"containers" gorm:"many2many:shipment_containers;"`
+	Vessels     []Vessel     `json:"vessels" gorm:"many2many:shipment_vessels;"`
+	Facilities  []Facility   `json:"facilities" gorm:"many2many:shipment_facilities;"`
+	PublicViews []PublicView `json:"public_views" gorm:"many2many:public_view_shipments;"`
 
 	// One-to-Many
 	Routes        []ShipmentRoute `json:"routes" gorm:"foreignKey:ShipmentID"`

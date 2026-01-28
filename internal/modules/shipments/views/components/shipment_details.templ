@@ -2,6 +2,7 @@ package components
 
 import (
 	"go-starter/internal/modules/shipments/dto"
+	"go-starter/internal/utils"
 	"sort"
 )
 
@@ -56,8 +57,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Consignee</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.Consignee != "" {
-							{ d.Consignee }
+						if utils.StrPatternNotEmpty(d.Consignee) {
+							{ *d.Consignee }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -66,8 +67,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Recipient</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.Recipient != "" {
-							{ d.Recipient }
+						if utils.StrPatternNotEmpty(d.Recipient) {
+							{ *d.Recipient }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -76,8 +77,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Assigned To</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.AssignedTo != "" {
-							{ d.AssignedTo }
+						if utils.StrPatternNotEmpty(d.AssignedTo) {
+							{ *d.AssignedTo }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not assigned</span>
 						}
@@ -86,8 +87,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Shipper</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.Shipper != "" {
-							{ d.Shipper }
+						if utils.StrPatternNotEmpty(d.Shipper) {
+							{ *d.Shipper }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -96,8 +97,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Place of Loading</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.PlaceOfLoading != "" {
-							{ d.PlaceOfLoading }
+						if utils.StrPatternNotEmpty(d.PlaceOfLoading) {
+							{ *d.PlaceOfLoading }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -106,8 +107,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Place of Delivery</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.PlaceOfDelivery != "" {
-							{ d.PlaceOfDelivery }
+						if utils.StrPatternNotEmpty(d.PlaceOfDelivery) {
+							{ *d.PlaceOfDelivery }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -116,8 +117,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Final Destination</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.FinalDestination != "" {
-							{ d.FinalDestination }
+						if utils.StrPatternNotEmpty(d.FinalDestination) {
+							{ *d.FinalDestination }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -126,8 +127,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Container Type</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.ContainerType != "" {
-							{ d.ContainerType }
+						if utils.StrPatternNotEmpty(d.ContainerType) {
+							{ *d.ContainerType }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -136,8 +137,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Invoice Amount</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.InvoiceAmount != "" {
-							{ d.InvoiceAmount }
+						if utils.StrPatternNotEmpty(d.InvoiceAmount) {
+							{ *d.InvoiceAmount }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -146,8 +147,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Cost</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.Cost != "" {
-							{ d.Cost }
+						if utils.StrPatternNotEmpty(d.Cost) {
+							{ *d.Cost }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -156,8 +157,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">Customs</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.Customs != "" {
-							{ d.Customs }
+						if utils.StrPatternNotEmpty(d.Customs) {
+							{ *d.Customs }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -166,8 +167,8 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				<div>
 					<label class="text-sm font-medium text-gray-600 dark:text-gray-400">MBL</label>
 					<p class="text-sm text-gray-900 dark:text-white">
-						if d.MBL != "" {
-							{ d.MBL }
+						if utils.StrPatternNotEmpty(d.MBL) {
+							{ *d.MBL }
 						} else {
 							<span class="text-gray-500 dark:text-gray-400">Not specified</span>
 						}
@@ -193,11 +194,11 @@ templ ShipmentDetails(d dto.ShipmentDetailsResponse) {
 				</div>
 			</div>
 			<!-- Notes Section -->
-			if d.Notes != "" {
+			if utils.StrPatternNotEmpty(d.Notes) {
 				<div class="mt-6">
 					<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
 					<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-						<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{ d.Notes }</p>
+						<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{ *d.Notes }</p>
 					</div>
 				</div>
 			}

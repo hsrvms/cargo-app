@@ -36,13 +36,20 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	shipmentRepository := shipmentRespositories.NewShipmentRepository(database)
 	shipmentService := shipmentServices.NewShipmentService(shipmentRepository, safeCubeAPIService)
 	shipmentAPIHandler := handlers.NewShipmentAPIHandler(shipmentService, safeCubeAPIService)
-
 	shipmentWEBHandler := handlers.NewShipmentWEBHandler(shipmentService)
+
+	publicViewRepository := shipmentRespositories.NewPublicViewRepository(database)
+	publicViewService := shipmentServices.NewPublicViewService(publicViewRepository, shipmentRepository)
+	publicViewAPIHandler := handlers.NewPublicViewAPIHandler(publicViewService)
+	publicViewWEBHandler := handlers.NewPublicViewWebHandler(publicViewService, shipmentService)
 
 	shipmentsAPI := api.Group("/shipments")
 	shipmentsAPI.Use(middlewares.JWTMiddleware(jwtService))
 
 	shipmentsAPI.POST("", shipmentAPIHandler.AddShipment)
+	shipmentsAPI.POST("/public-views", publicViewAPIHandler.CreatePublicView)
+	shipmentsAPI.GET("/public-views", publicViewAPIHandler.GetAllByUserID)
+	shipmentsAPI.DELETE("/public-views/:id", publicViewAPIHandler.Delete)
 	shipmentsAPI.GET("/raw-data", shipmentAPIHandler.GetRawSafeCubeData)
 	shipmentsAPI.GET("/grid-data", shipmentAPIHandler.GetShipmentsForGrid)
 	shipmentsAPI.GET("/:id/details", shipmentAPIHandler.GetShipmentDetails)
@@ -56,4 +63,10 @@ func RegisterRoutes(e *echo.Echo, api *echo.Group, database *db.Database, cfg *c
 	e.GET("/shipments", shipmentWEBHandler.ViewShipmentPage, middlewares.WebJWTMiddleware(jwtService))
 	e.GET("/shipments/grid", shipmentWEBHandler.ViewGridOnlyPage, middlewares.WebJWTMiddleware(jwtService))
 	e.GET("/map", shipmentWEBHandler.ViewMapPage, middlewares.WebJWTMiddleware(jwtService))
+	e.GET("/shipments/public-views/list", publicViewWEBHandler.GetUserViewsList, middlewares.JWTMiddleware(jwtService))
+	e.GET("/shipments/public/:id", publicViewWEBHandler.ViewPublicGridPage)
+
+	api.GET("/shipments/:id/public-details-html", publicViewWEBHandler.GetPublicShipmentDetailsHTML)
+	api.GET("/shipments/public/:id", publicViewAPIHandler.GetByID)
+
 }
