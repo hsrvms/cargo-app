@@ -12,25 +12,22 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// Filter CRUD routes
 func RegisterRoutes(api *echo.Group, database *db.Database, cfg *config.Config) {
-	// Initialize dependencies
 	filterRepo := repositories.NewRepository(database)
 	filterService := filterServices.NewFilterService(filterRepo)
 	filterAPIHandler := handlers.NewFilterAPIHandler(filterService)
 
-	// Create JWT service for middleware
 	jwtService := services.NewJWTService()
 
-	// Create filters group with JWT middleware
 	filtersGroup := api.Group("/filters", middlewares.JWTMiddleware(jwtService))
 
-	// Filter CRUD routes
-	filtersGroup.POST("", filterAPIHandler.SaveFilter)                         // POST /api/filters
-	filtersGroup.GET("", filterAPIHandler.GetAllFilters)                       // GET /api/filters
-	filtersGroup.GET("/:id", filterAPIHandler.GetFilter)                       // GET /api/filters/:id
-	filtersGroup.PUT("/:id", filterAPIHandler.UpdateFilter)                    // PUT /api/filters/:id
-	filtersGroup.DELETE("/:id", filterAPIHandler.DeleteFilter)                 // DELETE /api/filters/:id
-	filtersGroup.GET("/by-name/:name", filterAPIHandler.GetFilterByName)       // GET /api/filters/by-name/:name
-	filtersGroup.DELETE("/by-name/:name", filterAPIHandler.DeleteFilterByName) // DELETE /api/filters/by-name/:name
-	filtersGroup.GET("/stats", filterAPIHandler.GetFilterStats)                // GET /api/filters/stats
+	filtersGroup.POST("", filterAPIHandler.SaveFilter)
+	filtersGroup.GET("", filterAPIHandler.GetAllFilters)
+	filtersGroup.GET("/:id", filterAPIHandler.GetFilter)
+	filtersGroup.PUT("/:id", filterAPIHandler.UpdateFilter)
+	filtersGroup.DELETE("/:id", filterAPIHandler.DeleteFilter)
+	filtersGroup.GET("/by-name/:name", filterAPIHandler.GetFilterByName)
+	filtersGroup.DELETE("/by-name/:name", filterAPIHandler.DeleteFilterByName)
+	filtersGroup.GET("/stats", filterAPIHandler.GetFilterStats)
 }
