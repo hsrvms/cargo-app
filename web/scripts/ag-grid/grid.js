@@ -10,6 +10,7 @@ let filterManager;
 
 const rowSelection = {
     mode: "multiRow",
+    selectAll: "filtered",
     // enableClickSelection: false,
 };
 
