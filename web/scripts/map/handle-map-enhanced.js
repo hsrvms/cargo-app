@@ -813,7 +813,7 @@ export function createShipmentPopup(shipment) {
       </div>
 
       <div style="margin-top: 8px;">
-        <button onclick="openModalFetchDetails('${shipment.id}')"
+        <button onclick="openModalFetchPublicDetails('${shipment.id}')"
                 style="background: #2563eb; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">
           View Details
         </button>
