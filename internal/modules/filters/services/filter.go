@@ -23,26 +23,24 @@ func NewFilterService(filterRepo *repositories.FilterRepository) *FilterService 
 
 // SaveFilter saves a new filter or updates an existing one
 func (s *FilterService) SaveFilter(ctx context.Context, userID uuid.UUID, req *dto.SaveFilterRequest) (*dto.SaveFilterResponse, error) {
-	// Check if filter with this name already exists
 	existingFilter, err := s.filterRepo.GetFilterByName(ctx, req.Name, userID)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("error checking existing filter: %w", err)
 	}
 
-	// If filter exists, update it
 	if existingFilter != nil {
-		existingFilter.FilterData = req.FilterData
-		if err := s.filterRepo.UpdateFilter(ctx, existingFilter); err != nil {
-			return nil, fmt.Errorf("error updating filter: %w", err)
-		}
+		return nil, fmt.Errorf("filter names cannot be the same, please try another name for this filter")
+		// existingFilter.FilterData = req.FilterData
+		// if err := s.filterRepo.UpdateFilter(ctx, existingFilter); err != nil {
+		// 	return nil, fmt.Errorf("error updating filter: %w", err)
+		// }
 
-		return &dto.SaveFilterResponse{
-			ID:      existingFilter.ID,
-			Message: fmt.Sprintf("Filter '%s' updated successfully", req.Name),
-		}, nil
+		// return &dto.SaveFilterResponse{
+		// 	ID:      existingFilter.ID,
+		// 	Message: fmt.Sprintf("Filter '%s' updated successfully", req.Name),
+		// }, nil
 	}
 
-	// Create new filter
 	filter := &models.UserFilter{
 		UserID:     userID,
 		Name:       req.Name,

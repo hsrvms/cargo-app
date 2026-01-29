@@ -24,7 +24,6 @@ func NewFilterAPIHandler(filterService *filterServices.FilterService) *FilterAPI
 	}
 }
 
-// SaveFilter handles POST /api/filters
 func (h *FilterAPIHandler) SaveFilter(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -48,7 +47,6 @@ func (h *FilterAPIHandler) SaveFilter(c echo.Context) error {
 		})
 	}
 
-	// Trim and validate filter name
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -66,7 +64,6 @@ func (h *FilterAPIHandler) SaveFilter(c echo.Context) error {
 	return c.JSON(http.StatusCreated, response)
 }
 
-// GetFilter handles GET /api/filters/:id
 func (h *FilterAPIHandler) GetFilter(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -100,7 +97,6 @@ func (h *FilterAPIHandler) GetFilter(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-// GetFilterByName handles GET /api/filters/by-name/:name
 func (h *FilterAPIHandler) GetFilterByName(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -133,7 +129,6 @@ func (h *FilterAPIHandler) GetFilterByName(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-// GetAllFilters handles GET /api/filters
 func (h *FilterAPIHandler) GetAllFilters(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -154,7 +149,6 @@ func (h *FilterAPIHandler) GetAllFilters(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-// UpdateFilter handles PUT /api/filters/:id
 func (h *FilterAPIHandler) UpdateFilter(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -186,7 +180,6 @@ func (h *FilterAPIHandler) UpdateFilter(c echo.Context) error {
 		})
 	}
 
-	// Trim and validate filter name
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -214,7 +207,6 @@ func (h *FilterAPIHandler) UpdateFilter(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-// DeleteFilter handles DELETE /api/filters/:id
 func (h *FilterAPIHandler) DeleteFilter(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -250,7 +242,6 @@ func (h *FilterAPIHandler) DeleteFilter(c echo.Context) error {
 	})
 }
 
-// DeleteFilterByName handles DELETE /api/filters/by-name/:name
 func (h *FilterAPIHandler) DeleteFilterByName(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -285,7 +276,6 @@ func (h *FilterAPIHandler) DeleteFilterByName(c echo.Context) error {
 	})
 }
 
-// GetFilterStats handles GET /api/filters/stats
 func (h *FilterAPIHandler) GetFilterStats(c echo.Context) error {
 	ctx := c.Request().Context()
 
