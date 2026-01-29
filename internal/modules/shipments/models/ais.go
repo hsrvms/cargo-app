@@ -30,6 +30,7 @@ type Ais struct {
 	ArrivalPortDate          *time.Time `gorm:"type:timestamptz"`
 	ArrivalPortDateLabel     *string    `gorm:"type:varchar(255)"`
 	VesselID                 *uuid.UUID `gorm:"type:uuid"`
+	Vessel                   *Vessel    `gorm:"foreignKey:VesselID"`
 	LastVesselPositionLat    *float64   `gorm:"type:decimal(10,8)"`
 	LastVesselPositionLng    *float64   `gorm:"type:decimal(11,8)"`
 	LastVesselPositionUpdate *time.Time `gorm:"type:timestamptz"`

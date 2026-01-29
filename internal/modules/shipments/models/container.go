@@ -15,6 +15,8 @@ type Container struct {
 	Status    string    `gorm:"type:varchar(50);not null"`
 	CreatedAt time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	UpdatedAt time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+
+	Events []ContainerEvent `gorm:"foreignKey:ContainerID"`
 }
 
 func (Container) TableName() string {

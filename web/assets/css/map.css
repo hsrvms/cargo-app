@@ -1,0 +1,103 @@
+/* ============================================
+   Map Container Styles
+   ============================================ */
+
+.map-container {
+    height: calc(100vh - 200px);
+    min-height: 600px;
+    width: 100%;
+}
+
+/* Responsive map heights */
+@media (max-height: 768px) {
+    .map-container {
+        height: calc(100vh - 180px);
+        min-height: 400px;
+    }
+}
+
+@media (min-height: 1080px) {
+    .map-container {
+        height: calc(100vh - 220px);
+        min-height: 700px;
+    }
+}
+
+/* ============================================
+   Map Status Indicator
+   ============================================ */
+
+.map-status {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
+}
+
+.dark .map-status {
+    background: rgba(31, 41, 55, 0.9);
+    color: white;
+}
+
+/* ============================================
+   Connection Indicator
+   ============================================ */
+
+.connection-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.connection-indicator.connected {
+    background-color: #10b981;
+    animation: pulse-green 2s infinite;
+}
+
+.connection-indicator.connecting {
+    background-color: #f59e0b;
+    animation: pulse-yellow 2s infinite;
+}
+
+.connection-indicator.disconnected {
+    background-color: #ef4444;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes pulse-green {
+    0% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+@keyframes pulse-yellow {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}

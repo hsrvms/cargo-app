@@ -1,0 +1,32 @@
+package components
+
+templ PublicViewManagerModal() {
+	<div
+		id="public-view-manager-modal"
+		class="fixed inset-0 z-[9999] hidden opacity-0 bg-black bg-opacity-50 transition-opacity duration-300"
+		onclick="document.getElementById('public-view-manager-modal').classList.add('hidden', 'opacity-0')"
+	>
+		<div class="flex items-center justify-center min-h-screen px-4 py-6">
+			<div
+				class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col transform transition-all duration-300 scale-95 opacity-0"
+				id="pvm-content"
+				onclick="event.stopPropagation()"
+			>
+				<div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Shared Links</h2>
+					<button onclick="document.getElementById('public-view-manager-modal').classList.add('hidden', 'opacity-0')" class="text-gray-400 hover:text-gray-500">
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+					</button>
+				</div>
+				<div id="public-view-list-container" class="p-6 overflow-y-auto">
+					<div class="flex justify-center">
+						<svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+						</svg>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}

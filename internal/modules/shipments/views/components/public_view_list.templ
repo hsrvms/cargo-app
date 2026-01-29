@@ -1,0 +1,71 @@
+package components
+
+import (
+	"fmt"
+	"go-starter/internal/modules/shipments/models"
+)
+
+script CopyLinkScript(viewID string) {
+	const path = '/shipments/public/' + viewID;
+	const fullUrl = window.location.origin + path;
+	navigator.clipboard.writeText(fullUrl).then(() => {
+		alert("Link copied to clipboard!");
+	});
+}
+
+templ PublicViewList(views []models.PublicView) {
+	if len(views) == 0 {
+		<div class="text-center py-8 text-gray-500">
+			<p>You haven't created any shared links yet.</p>
+		</div>
+	} else {
+		<div class="space-y-4">
+			for _, v := range views {
+				<div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+					<div class="flex-1 min-w-0 mr-4">
+						<div class="flex items-center space-x-2">
+							<h4 class="text-sm font-semibold text-gray-900 dark:text-white truncate" title={ v.Name }>
+								{ v.Name }
+							</h4>
+							<span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+								{ fmt.Sprintf("%d Shipments", len(v.Shipments)) }
+							</span>
+						</div>
+						<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+							Expires: { v.ExpiresAt.Format("02 Jan 2006") }
+						</p>
+					</div>
+					<div class="flex items-center space-x-2 shrink-0">
+						<button
+							onclick={ CopyLinkScript(v.ID.String()) }
+							class="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+							title="Copy Link"
+						>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+						</button>
+						<button
+							hx-delete={ fmt.Sprintf("/api/shipments/public-views/%s", v.ID) }
+							hx-confirm="Are you sure you want to delete this shared link? It will stop working immediately."
+							hx-target="closest div.flex"
+							hx-swap="outerHTML"
+							class="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+							title="Delete View"
+						>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+							</svg>
+						</button>
+					</div>
+				</div>
+			}
+		</div>
+	}
+	<script>
+		function copyLink(path) {
+			const fullUrl = window.location.origin + path;
+			navigator.clipboard.writeText(fullUrl).then(() => {
+				alert("Link copied to clipboard!");
+			});
+		}
+	</script>
+}

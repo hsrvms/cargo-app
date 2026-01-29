@@ -31,6 +31,11 @@ func (h *shipmentWEBHandler) ViewMapPage(c echo.Context) error {
 	return component.Render(c.Request().Context(), c.Response().Writer)
 }
 
+func (h *shipmentWEBHandler) ViewGridOnlyPage(c echo.Context) error {
+	component := views.GridOnlyPage()
+	return component.Render(c.Request().Context(), c.Response().Writer)
+}
+
 func (h *shipmentWEBHandler) GetShipmentDetailsHTML(c echo.Context) error {
 	ctx := c.Request().Context()
 

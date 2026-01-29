@@ -19,7 +19,7 @@ type Shipment struct {
 	UpdatedAt      time.Time      `json:"updated_at" gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	Warnings       pq.StringArray `json:"warnings" gorm:"type:text[];default:'{}'"`
 
-	// Shipment information
+	// Shipment information | Custom info for manual entry
 	Consignee        string `json:"consignee" gorm:"type:varchar(255)"`
 	Recipient        string `json:"recipient" gorm:"type:varchar(255)"`
 	AssignedTo       string `json:"assigned_to" gorm:"type:varchar(255)"`
@@ -38,9 +38,23 @@ type Shipment struct {
 	CustomsProcessed bool `json:"customs_processed" gorm:"type:boolean;default:false"`
 	Invoiced         bool `json:"invoiced" gorm:"type:boolean;default:false"`
 	PaymentReceived  bool `json:"payment_received" gorm:"type:boolean;default:false"`
+
+	// Many-to-Many
+	Locations   []Location   `json:"locations" gorm:"many2many:shipment_locations;"`
+	Containers  []Container  `json:"containers" gorm:"many2many:shipment_containers;"`
+	Vessels     []Vessel     `json:"vessels" gorm:"many2many:shipment_vessels;"`
+	Facilities  []Facility   `json:"facilities" gorm:"many2many:shipment_facilities;"`
+	PublicViews []PublicView `json:"public_views" gorm:"many2many:public_view_shipments;"`
+
+	// One-to-Many
+	Routes        []ShipmentRoute `json:"routes" gorm:"foreignKey:ShipmentID"`
+	RouteSegments []RouteSegment  `json:"route_segments" gorm:"foreignKey:ShipmentID"`
+	Coordinates   []Coordinate    `json:"coordinates" gorm:"foreignKey:ShipmentID"`
+
+	// One-to-One
+	Ais *Ais `json:"ais" gorm:"foreignKey:ShipmentID"`
 }
 
-// TableName specifies the table name for Shipment
 func (Shipment) TableName() string {
 	return "shipments"
 }
@@ -71,19 +85,14 @@ func AutoMigrateShipments(db *gorm.DB) error {
 	return db.AutoMigrate(&Shipment{})
 }
 
-// Repository methods for common operations
-
-// CreateShipment creates a new shipment
 func CreateShipment(db *gorm.DB, shipment *Shipment) error {
 	return db.Create(shipment).Error
 }
 
-// UpdateShipment updates an existing shipment
 func UpdateShipment(db *gorm.DB, shipment *Shipment) error {
 	return db.Save(shipment).Error
 }
 
-// UpdateShipmentAPIData updates API-related fields
 func UpdateShipmentAPIData(db *gorm.DB, shipmentID uuid.UUID, status string, warnings pq.StringArray) error {
 	return db.Model(&Shipment{}).
 		Where("id = ?", shipmentID).
@@ -95,7 +104,6 @@ func UpdateShipmentAPIData(db *gorm.DB, shipmentID uuid.UUID, status string, war
 		}).Error
 }
 
-// GetShipmentsByUser retrieves all shipments for a specific user
 func GetShipmentsByUser(db *gorm.DB, userID uuid.UUID) ([]Shipment, error) {
 	var shipments []Shipment
 	err := db.Joins("JOIN user_shipments ON user_shipments.shipment_id = shipments.id").
@@ -104,33 +112,28 @@ func GetShipmentsByUser(db *gorm.DB, userID uuid.UUID) ([]Shipment, error) {
 	return shipments, err
 }
 
-// GetShipmentsWithUsers retrieves shipments with their associated users
 func GetShipmentsWithUsers(db *gorm.DB) ([]Shipment, error) {
 	var shipments []Shipment
 	err := db.Preload("Users").Find(&shipments).Error
 	return shipments, err
 }
 
-// DeleteShipment deletes a shipment (will cascade to user_shipments due to foreign key constraint)
 func DeleteShipment(db *gorm.DB, id uuid.UUID) error {
 	return db.Delete(&Shipment{}, id).Error
 }
 
-// ShipmentExists checks if a shipment exists by shipment number
 func ShipmentExists(db *gorm.DB, shipmentNumber string) (bool, error) {
 	var count int64
 	err := db.Model(&Shipment{}).Where("shipment_number = ?", shipmentNumber).Count(&count).Error
 	return count > 0, err
 }
 
-// GetShipmentsByStatus retrieves shipments by shipping status
 func GetShipmentsByStatus(db *gorm.DB, status string) ([]Shipment, error) {
 	var shipments []Shipment
 	err := db.Where("shipping_status = ?", status).Find(&shipments).Error
 	return shipments, err
 }
 
-// GetShipmentsNeedingAPIUpdate retrieves shipments that need API updates
 func GetShipmentsNeedingAPIUpdate(db *gorm.DB, olderThan time.Time) ([]Shipment, error) {
 	var shipments []Shipment
 	err := db.Where("last_api_fetch IS NULL OR last_api_fetch < ?", olderThan).

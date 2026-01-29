@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	authService "go-starter/internal/modules/auth/services"
 	"go-starter/internal/modules/shipments/dto"
 	shipmentServices "go-starter/internal/modules/shipments/services"
@@ -126,13 +127,6 @@ func (h *shipmentAPIHandler) GetShipmentsForGrid(c echo.Context) error {
 			"error": "unauthorized",
 		})
 	}
-
-	// var req dto.GridDataRequest
-	// if err := c.Bind(&req); err != nil {
-	// 	return c.JSON(http.StatusBadRequest, map[string]string{
-	// 		"error": "invalid request body",
-	// 	})
-	// }
 
 	gridData, err := h.shipmentService.GetShipmentsForGrid(ctx, userID)
 	if err != nil {
@@ -339,4 +333,41 @@ func (h *shipmentAPIHandler) BulkDeleteUserShipments(c echo.Context) error {
 		"message": "success",
 	})
 
+}
+
+func (h *shipmentAPIHandler) GetRawSafeCubeData(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	shipmentNumber := c.QueryParam("shipmentNumber")
+	shipmentType := c.QueryParam("shipmentType")
+	sealineCode := c.QueryParam("sealine")
+
+	if shipmentNumber == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "shipmentNumber query parameter is required",
+		})
+	}
+
+	shipmentNumber = strings.ToUpper(strings.TrimSpace(shipmentNumber))
+	shipmentType = strings.ToUpper(strings.TrimSpace(shipmentType))
+	sealineCode = strings.ToUpper(strings.TrimSpace(sealineCode))
+
+	rawData, err := h.safeCubeAPIService.GetRawShipmentData(
+		ctx,
+		shipmentNumber,
+		shipmentType,
+		sealineCode,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "rate limit") {
+			return c.JSON(http.StatusTooManyRequests, map[string]string{
+				"error": "API rate limit exceeded. Please try again later",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": fmt.Sprintf("Failed to fetch shipment data: %v", err),
+		})
+	}
+
+	return c.JSONBlob(http.StatusOK, rawData)
 }

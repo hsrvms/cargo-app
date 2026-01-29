@@ -8,15 +8,11 @@ import (
 	"time"
 )
 
-// Job represents a background job that can be started and stopped
 type Job interface {
-	// Start begins the job execution with the given context
 	Start(ctx context.Context)
-	// GetName returns the name of the job for logging purposes
 	GetName() string
 }
 
-// JobScheduler manages multiple background jobs
 type JobScheduler struct {
 	jobs      map[string]Job
 	ctx       context.Context
@@ -27,20 +23,16 @@ type JobScheduler struct {
 	startTime time.Time
 }
 
-// SchedulerConfig contains configuration for the job scheduler
 type SchedulerConfig struct {
-	// GracefulShutdownTimeout is the maximum time to wait for jobs to stop gracefully
 	GracefulShutdownTimeout time.Duration
 }
 
-// DefaultSchedulerConfig returns a default scheduler configuration
 func DefaultSchedulerConfig() SchedulerConfig {
 	return SchedulerConfig{
 		GracefulShutdownTimeout: 30 * time.Second,
 	}
 }
 
-// NewJobScheduler creates a new job scheduler
 func NewJobScheduler() *JobScheduler {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -51,7 +43,6 @@ func NewJobScheduler() *JobScheduler {
 	}
 }
 
-// RegisterJob registers a new job with the scheduler
 func (s *JobScheduler) RegisterJob(name string, job Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -69,7 +60,6 @@ func (s *JobScheduler) RegisterJob(name string, job Job) error {
 	return nil
 }
 
-// UnregisterJob removes a job from the scheduler
 func (s *JobScheduler) UnregisterJob(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -87,7 +77,6 @@ func (s *JobScheduler) UnregisterJob(name string) error {
 	return nil
 }
 
-// Start begins all registered jobs
 func (s *JobScheduler) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -101,7 +90,6 @@ func (s *JobScheduler) Start() error {
 
 	log.Printf("Starting job scheduler with %d registered jobs", len(s.jobs))
 
-	// Start all registered jobs
 	for name, job := range s.jobs {
 		s.wg.Add(1)
 		go func(jobName string, j Job) {
@@ -122,12 +110,10 @@ func (s *JobScheduler) Start() error {
 	return nil
 }
 
-// Stop gracefully shuts down all running jobs
 func (s *JobScheduler) Stop() error {
 	return s.StopWithTimeout(DefaultSchedulerConfig().GracefulShutdownTimeout)
 }
 
-// StopWithTimeout gracefully shuts down all running jobs with a timeout
 func (s *JobScheduler) StopWithTimeout(timeout time.Duration) error {
 	s.mu.Lock()
 	if !s.started {
@@ -138,10 +124,8 @@ func (s *JobScheduler) StopWithTimeout(timeout time.Duration) error {
 
 	log.Printf("Stopping job scheduler (timeout: %v)", timeout)
 
-	// Cancel context to signal all jobs to stop
 	s.cancel()
 
-	// Wait for all jobs to finish with timeout
 	done := make(chan struct{})
 	go func() {
 		s.wg.Wait()
@@ -165,14 +149,12 @@ func (s *JobScheduler) StopWithTimeout(timeout time.Duration) error {
 	return nil
 }
 
-// IsRunning returns true if the scheduler is currently running
 func (s *JobScheduler) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.started
 }
 
-// GetRegisteredJobs returns a list of registered job names
 func (s *JobScheduler) GetRegisteredJobs() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -184,7 +166,6 @@ func (s *JobScheduler) GetRegisteredJobs() []string {
 	return names
 }
 
-// GetUptime returns how long the scheduler has been running
 func (s *JobScheduler) GetUptime() time.Duration {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -195,18 +176,15 @@ func (s *JobScheduler) GetUptime() time.Duration {
 	return time.Since(s.startTime)
 }
 
-// GetContext returns the scheduler's context (useful for jobs that need it)
 func (s *JobScheduler) GetContext() context.Context {
 	return s.ctx
 }
 
-// JobWrapper adapts a function to implement the Job interface
 type JobWrapper struct {
 	name string
 	fn   func(ctx context.Context)
 }
 
-// NewJobWrapper creates a job wrapper from a function
 func NewJobWrapper(name string, fn func(ctx context.Context)) *JobWrapper {
 	return &JobWrapper{
 		name: name,
@@ -214,17 +192,14 @@ func NewJobWrapper(name string, fn func(ctx context.Context)) *JobWrapper {
 	}
 }
 
-// Start implements the Job interface
 func (jw *JobWrapper) Start(ctx context.Context) {
 	jw.fn(ctx)
 }
 
-// GetName implements the Job interface
 func (jw *JobWrapper) GetName() string {
 	return jw.name
 }
 
-// Common scheduler errors
 var (
 	ErrSchedulerAlreadyStarted = fmt.Errorf("scheduler is already started")
 	ErrSchedulerNotStarted     = fmt.Errorf("scheduler is not started")

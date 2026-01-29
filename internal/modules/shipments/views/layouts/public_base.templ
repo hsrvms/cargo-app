@@ -1,0 +1,65 @@
+package layouts
+
+templ PublicBaseLayout(title string, additionalScripts templ.Component) {
+	<!DOCTYPE html>
+	<html
+		lang="en"
+		x-data="{
+			theme: localStorage.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+		}"
+		:class="{ 'dark': theme === 'dark' }"
+		x-init="$watch('theme', value => localStorage.theme = value)"
+	>
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Shipment Management</title>
+			<script>
+			    (function() {
+					const theme = localStorage.theme || (window.matchMedia('(perefers-color-scheme: dark)').matches ? 'dark' : 'light');
+					    if (theme === 'dark'){
+							document.documentElement.classList.add('dark')
+						}
+					})();
+			</script>
+			<link rel="stylesheet" href="/assets/css/styles.css"/>
+			<script src="/assets/js/tailwindcss.js"></script>
+			<script src="/config/tailwind.config.js"></script>
+			<script src="/assets/js/htmx.min.js" defer></script>
+			<script src="/assets/js/htmx-ext-response-targets.js" defer></script>
+			<script src="/assets/js/ag-grid-enterprise.min.js"></script>
+			<script src="/assets/js/leaflet.js"></script>
+			<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+			<script>
+				document.addEventListener('DOMContentLoaded', function() {
+					document.body.addEventListener('htmx:responseError', function(evt) {
+						if (evt.detail.xhr.status >= 300 && evt.detail.xhr.status < 400) {
+							const location = evt.detail.xhr.getResponseHeader('Location');
+							if (location) {
+								window.location.href = location;
+								return;
+							}
+						}
+					});
+
+					document.body.addEventListener('htmx:afterRequest', function(evt) {
+						if (evt.detail.xhr.status >= 300 && evt.detail.xhr.status < 400) {
+							const location = evt.detail.xhr.getResponseHeader('Location');
+							if (location) {
+								window.location.href = location;
+								return;
+							}
+						}
+					});
+				});
+			</script>
+		</head>
+		<body class="min-h-screen bg-gray-50 dark:bg-gray-900">
+			{ children... }
+			<div id="toast-container" class="fixed top-5 right-5 space-y-3 z-50"></div>
+			if additionalScripts != nil {
+				@additionalScripts
+			}
+		</body>
+	</html>
+}

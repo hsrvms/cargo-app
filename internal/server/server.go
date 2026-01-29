@@ -9,10 +9,13 @@ import (
 	"go-starter/pkg/config"
 	"go-starter/pkg/db"
 	"go-starter/pkg/ratelimiter"
+	"go-starter/web"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -30,15 +33,54 @@ type Server struct {
 func New(cfg *config.Config, database *db.Database) *Server {
 	e := echo.New()
 
-	e.Use(prettylogger.Logger)
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			start := time.Now()
+			err := next(c)
+			if duration := time.Since(start); duration > 1*time.Second {
+				log.Printf("⚠️ SLOW REQUEST: %s %s took %v",
+					c.Request().Method,
+					c.Request().URL.Path,
+					duration,
+				)
+			}
+			return err
+		}
+	})
+
+	if os.Getenv("APP_ENV") == "production" {
+		e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+			Skipper: func(c echo.Context) bool {
+				path := c.Request().URL.Path
+				return strings.HasPrefix(path, "/assets") ||
+					strings.HasPrefix(path, "/scripts") ||
+					strings.HasPrefix(path, "/config")
+			},
+			Format: "[${time_rfc3339}] ${status} ${method} ${path} (${latency_human})\n",
+		}))
+	} else {
+		e.Use(prettylogger.Logger)
+	}
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	e.Static("/assets", "web/assets")
-	e.Static("/scripts", "web/scripts")
-	e.Static("/config", "web/config")
+	assetsFS, err := fs.Sub(web.Assets, "assets")
+	if err != nil {
+		log.Fatal(err)
+	}
+	scriptsFS, err := fs.Sub(web.Scripts, "scripts")
+	if err != nil {
+		log.Fatal(err)
+	}
+	configFS, err := fs.Sub(web.Config, "config")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Initialize job scheduler
+	e.StaticFS("/assets", assetsFS)
+	e.StaticFS("/scripts", scriptsFS)
+	e.StaticFS("/config", configFS)
+
 	jobScheduler := jobs.NewJobScheduler()
 
 	server := &Server{
